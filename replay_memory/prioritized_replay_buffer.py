@@ -1,14 +1,18 @@
 import math
 import numpy as np
-from sum_tree import SumTree
+from replay_memory.sum_tree import SumTree
 
 class ReplayBuffer:
-    e = 0.01
-    a = 0.6
-    beta = 0.4
-    beta_increment_per_sampling = 0.001
-    
-    def __init__(self, buffer_size):
+    def __init__(self,
+                 buffer_size,
+                 e=0.01, a=0.6,
+                 beta=0.4,
+                 beta_increment_per_sampling=0.001):
+        
+        self.e = e
+        self.a = a
+        self.beta = beta
+        self.beta_increment_per_sampling = beta_increment_per_sampling
         self.buffer_size = int(buffer_size)
         self.buffer = []
         self.index = 0
