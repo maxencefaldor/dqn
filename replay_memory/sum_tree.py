@@ -153,13 +153,11 @@ class SumTree(object):
                              format(value))
         self.max_recorded_priority = max(value, self.max_recorded_priority)
         
-        delta_value = value - self.nodes[-1][node_index]
-        
-        # Now traverse back the tree, adjusting all sums along the way.
-        for nodes_at_this_depth in reversed(self.nodes):
-            # Note: Adding a delta leads to some tolerable numerical inaccuracies.
-            nodes_at_this_depth[node_index] += delta_value
+        self.nodes[-1][node_index] = value
+        for nodes_in_parent_layer, nodes_in_child_layer in zip(reversed(self.nodes[:-1]), reversed(self.nodes[1:])):
+            # Note: Adding a delta leads to some intolerable numerical inaccuracies.
             node_index //= 2
+            nodes_in_parent_layer[node_index] = nodes_in_child_layer[2*node_index] + nodes_in_child_layer[2*node_index+1]
         
         assert node_index == 0, ('Sum tree traversal failed, final node index '
                                  'is not 0.')
