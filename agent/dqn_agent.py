@@ -6,13 +6,13 @@ import random
 from copy import deepcopy
 from itertools import count
 
-from replay_memory import replay_buffer
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+
+from replay_memory import replay_buffer
 
 
 class DQNAgent(object):
@@ -68,7 +68,7 @@ class DQNAgent(object):
             self.beta = beta
             self._update_target_network = self._soft_update_target_network
         elif beta >= 1 and (isinstance(beta, int) or beta.is_integer()):
-            self.beta = int(self.beta)
+            self.beta = int(beta)
             self._update_target_network = self._hard_update_target_network
         else:
             raise ValueError("Beta should be a positive integer or a real "
@@ -86,7 +86,7 @@ class DQNAgent(object):
     
     def epsilon_greedy_action(self, state):
         if random.random() > self.epsilon:
-            self.greedy_action(state)
+            return self.greedy_action(state)
         else:
             return random.randint(0, self.n_actions - 1)
     
