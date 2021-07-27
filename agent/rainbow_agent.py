@@ -224,9 +224,8 @@ class DQNAgent:
     def save(self, path):
         torch.save(self.dqn.state_dict(), path)
     
-    def load(self, path):
-        self.dqn.load_state_dict(torch.load(path))
-
+    def load(self, path, map_location='cpu'):
+        self.dqn.load_state_dict(torch.load(path, map_location=map_location))
 
 
 if __name__ == "__main__":
