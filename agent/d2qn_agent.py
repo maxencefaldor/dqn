@@ -28,7 +28,7 @@ class D2QNAgent(DQNAgent):
             n_actions: int, number of actions the agent can take.
             network: `torch.nn`, neural network used to approximate Q.
             lr: float, learning rate.
-            gamma: float, discounting factor.
+            gamma: float, discount rate.
             batch_size: int, batch size.
             n_gradient_steps: int, number of gradient steps taken during a
                 time step.
