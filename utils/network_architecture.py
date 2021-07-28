@@ -8,9 +8,9 @@ import torch.nn.functional as F
 class CartpoleNetwork(nn.Module):
     def __init__(self):
         super(CartpoleNetwork, self).__init__()
-        self.fc1 = nn.Linear(2, 16)
+        self.fc1 = nn.Linear(4, 16)
         self.fc2 = nn.Linear(16, 16)
-        self.fc3 = nn.Linear(16, 3)
+        self.fc3 = nn.Linear(16, 2)
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -19,14 +19,14 @@ class CartpoleNetwork(nn.Module):
         return x
 
 class AtariNetwork(nn.Module):
-    def __init__(self, in_channels=4, n_actions=2):
+    def __init__(self, n_actions):
         super(AtariNetwork, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
+        self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         self.fc1 = nn.Linear(7 * 7 * 64, 512)
         self.fc2 = nn.Linear(512, n_actions)
-      
+    
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
