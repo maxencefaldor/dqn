@@ -24,6 +24,7 @@ class DQNAgent(object):
                  network,
                  lr=0.001,
                  gamma=0.99,
+                 n=1,
                  batch_size=32,
                  n_gradient_steps=1,
                  epsilon_min=0.01,
@@ -37,7 +38,8 @@ class DQNAgent(object):
             n_actions: int, number of actions the agent can take.
             network: `torch.nn`, neural network used to approximate Q.
             lr: float, learning rate.
-            gamma: float, discounting factor.
+            gamma: float, discount rate.
+            n: int, number of steps of bootstrapping.
             batch_size: int, batch size.
             n_gradient_steps: int, number of gradient steps taken during a
                 time step.
@@ -48,7 +50,6 @@ class DQNAgent(object):
                 is a positive integer. Soft update parameter for the target
                 network if beta is a float in (0, 1).
         """
-        
         self._device = device
         self.n_actions = n_actions
         self.network = network.to(self._device)
@@ -56,12 +57,15 @@ class DQNAgent(object):
         self.criterion = nn.MSELoss()
         self.optimizer = optim.RMSprop(network.parameters(), lr=lr)
         self.gamma = gamma
+        self.n = n
         self.batch_size = batch_size
         self.n_gradient_steps = n_gradient_steps
         self.epsilon = 1
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
-        self.replay_buffer = replay_buffer.ReplayBuffer(buffer_size)
+        self.replay_buffer = replay_buffer.ReplayBuffer(gamma=self.gamma,
+                                                        n=self.n,
+                                                        buffer_size=buffer_size)
         self.step = 0
         
         if beta > 0 and beta < 1:
@@ -99,21 +103,20 @@ class DQNAgent(object):
             param_target_network.data.copy_(param_network * self.beta + param_target_network * (1 - self.beta))
     
     def learn(self):
-        if len(self.replay_buffer) < self.batch_size:
+        if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         
         batch = self.replay_buffer.sample(self.batch_size)
-        batch = [*zip(*batch)]
         
-        state_batch = torch.stack(batch[0]).to(self._device)
-        action_batch = torch.stack(batch[1]).to(self._device)
-        reward_batch = torch.stack(batch[2]).to(self._device)
-        next_state_batch = torch.stack(batch[3]).to(self._device)
-        done_batch = torch.stack(batch[4]).to(self._device)
+        state_batch = torch.stack(batch.state).to(self._device)
+        action_batch = torch.stack(batch.action).to(self._device)
+        reward_batch = torch.stack(batch.reward).to(self._device)
+        next_state_batch = torch.stack(batch.next_state).to(self._device)
+        done_batch = torch.stack(batch.done).to(self._device)
         
         state_action_values = self.network(state_batch).gather(1, action_batch)
         next_state_action_values = self.target_network(next_state_batch).max(1)[0].unsqueeze(1).detach()
-        expected_state_action_values = reward_batch + self.gamma * next_state_action_values * (1 - done_batch)
+        expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
         
         loss = self.criterion(state_action_values, expected_state_action_values)
         
@@ -132,11 +135,11 @@ class DQNAgent(object):
                 action = self.epsilon_greedy_action(state)
                 next_state, reward, done, _ = env.step(action)
                 
-                self.replay_buffer.add(torch.Tensor(state),
+                self.replay_buffer.add(torch.tensor(state, dtype=torch.float32),
                                        torch.tensor([action], dtype=torch.long),
-                                       torch.tensor([reward], dtype=torch.float),
-                                       torch.Tensor(next_state),
-                                       torch.tensor([int(done)], dtype=torch.long))
+                                       reward,
+                                       torch.tensor(next_state, dtype=torch.float32),
+                                       done)
                 state = next_state
                 episode_return += reward
                 self.step += 1
