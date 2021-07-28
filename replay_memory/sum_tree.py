@@ -1,4 +1,8 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """A sum tree data structure.
+
 Used for prioritized experience replay. See prioritized_replay_buffer.py
 and Schaul et al. (2015).
 """
@@ -9,10 +13,13 @@ import numpy as np
 
 class SumTree(object):
     """A sum tree data structure for storing replay priorities.
+    
     A sum tree is a complete binary tree whose leaves contain values called
     priorities. Internal nodes maintain the sum of the priorities of all leaf
     nodes in their subtree.
+    
     For capacity = 4, the tree may look like this:
+    
                  +---+
                  |2.5|
                  +-+-+
@@ -28,19 +35,24 @@ class SumTree(object):
     +-+-+     +-+-+  +-+-+     +-+-+
     |0.5|     |1.0|  |0.5|     |0.5|
     +---+     +---+  +---+     +---+
+    
     This is stored in a list of numpy arrays:
     self.nodes = [ [2.5], [1.5, 1], [0.5, 1, 0.5, 0.5] ]
+    
     For conciseness, we allocate arrays as powers of two, and pad the excess
     elements with zero values.
+    
     This is similar to the usual array-based representation of a complete binary
     tree, but is a little more user-friendly.
     """
     
     def __init__(self, capacity):
         """Creates the sum tree data structure for the given replay capacity.
+        
         Args:
             capacity: int, the maximum number of elements that can be stored in this
             data structure.
+        
         Raises:
             ValueError: If requested capacity is not positive.
         """
@@ -61,6 +73,7 @@ class SumTree(object):
 
     def total(self):
         """Returns the sum of all priorities stored in this sum tree.
+        
         Returns:
             float, sum of priorities stored in this sum tree.
         """
@@ -70,11 +83,14 @@ class SumTree(object):
         """Samples an element from the sum tree.
         Each element has probability p_i / sum_j p_j of being picked, where p_i is
         the (positive) value associated with node i (possibly unnormalized).
+        
         Args:
             query_value: float in [0, 1], used as the random value to select a
             sample. If None, will select one randomly in [0, 1).
+        
         Returns:
             int, a random element from the sum tree.
+        
         Raises:
             Exception: If the sum tree is empty (i.e. its node values sum to 0), or if
             the supplied query_value is larger than the total sum.
@@ -108,14 +124,18 @@ class SumTree(object):
 
     def stratified_sample(self, batch_size):
         """Performs stratified sampling using the sum tree.
+        
         Let R be the value at the root (total value of sum tree). This method will
         divide [0, R) into batch_size segments, pick a random number from each of
         those segments, and use that random number to sample from the sum_tree. This
         is as specified in Schaul et al. (2015).
+        
         Args:
             batch_size: int, the number of strata to use.
+        
         Returns:
             list of batch_size elements sampled from the sum tree.
+        
         Raises:
             Exception: If the sum tree is empty (i.e. its node values sum to 0).
         """
@@ -130,8 +150,10 @@ class SumTree(object):
 
     def get(self, node_index):
         """Returns the value of the leaf node corresponding to the index.
+        
         Args:
             node_index: The index of the leaf node.
+        
         Returns:
             The value of the leaf node.
         """
@@ -140,11 +162,13 @@ class SumTree(object):
     def set(self, node_index, value):
         """Sets the value of a leaf node and updates internal nodes accordingly.
         This operation takes O(log(capacity)).
+        
         Args:
             node_index: int, the index of the leaf node to be updated.
             value: float, the value which we assign to the node. This value must be
             nonnegative. Setting value = 0 will cause the element to never be
             sampled.
+        
         Raises:
             ValueError: If the given value is negative.
         """
