@@ -102,6 +102,10 @@ class DQNAgent(object):
         for param_network, param_target_network in zip(self.network.parameters(), self.target_network.parameters()):
             param_target_network.data.copy_(param_network * self.beta + param_target_network * (1 - self.beta))
     
+    def _target_q(self, next_state_batch):
+        return self.target_network(
+            next_state_batch).max(1)[0].unsqueeze(1).detach()
+    
     def learn(self):
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
@@ -115,7 +119,7 @@ class DQNAgent(object):
         done_batch = torch.stack(batch.done).to(self._device)
         
         state_action_values = self.network(state_batch).gather(1, action_batch)
-        next_state_action_values = self.target_network(next_state_batch).max(1)[0].unsqueeze(1).detach()
+        next_state_action_values = self._target_q(next_state_batch)
         expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
         
         loss = self.criterion(state_action_values, expected_state_action_values)
