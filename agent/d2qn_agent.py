@@ -15,6 +15,7 @@ class D2QNAgent(DQNAgent):
                  network,
                  lr=0.001,
                  gamma=0.99,
+                 n=1,
                  batch_size=32,
                  n_gradient_steps=1,
                  epsilon_min=0.01,
@@ -39,13 +40,13 @@ class D2QNAgent(DQNAgent):
                 is a positive integer. Soft update parameter for the target
                 network if beta is a float in (0, 1).
         """
-        
         DQNAgent.__init__(self,
                           device=device,
                           n_actions=n_actions,
                           network=network,
                           lr=lr,
                           gamma=gamma,
+                          n=n,
                           batch_size=batch_size,
                           n_gradient_steps=n_gradient_steps,
                           epsilon_min=epsilon_min,
@@ -53,26 +54,5 @@ class D2QNAgent(DQNAgent):
                           buffer_size=buffer_size,
                           beta=beta)
     
-    def learn(self):
-        if len(self.replay_buffer) < self.batch_size:
-            return
-        
-        batch = self.replay_buffer.sample(self.batch_size)
-        batch = [*zip(*batch)]
-        
-        state_batch = torch.stack(batch[0]).to(self._device)
-        action_batch = torch.stack(batch[1]).to(self._device)
-        reward_batch = torch.stack(batch[2]).to(self._device)
-        next_state_batch = torch.stack(batch[3]).to(self._device)
-        done_batch = torch.stack(batch[4]).to(self._device)
-        
-        state_action_values = self.network(state_batch).gather(1, action_batch)
-        next_state_action_values = self.target_network(next_state_batch).gather(1, self.network(next_state_batch).max(1)[1].unsqueeze(1)).detach()
-        expected_state_action_values = reward_batch + self.gamma * next_state_action_values * (1 - done_batch)
-        
-        loss = self.criterion(state_action_values, expected_state_action_values)
-        
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self._update_target_network()
+    def _target_q(self, next_state_batch):
+        return self.target_network(next_state_batch).gather(1, self.network(next_state_batch).max(1)[1].unsqueeze(1)).detach()
