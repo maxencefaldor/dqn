@@ -69,8 +69,7 @@ class DuelingAtariNetwork(nn.Module):
         self.advantage_stream = nn.Sequential(
             nn.Linear(7 * 7 * 64, 512),
             nn.ReLU(),
-            nn.Linear(512, n_actions)
-        )
+            nn.Linear(512, n_actions))
 
     def forward(self, x):
         x = self.conv(x)
