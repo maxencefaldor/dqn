@@ -78,11 +78,11 @@ class DQNAgent(object):
             raise ValueError("Beta should be a positive integer or a real "
                              "number in (0, 1). Got: {}".format(beta))
     
-    def _exponentially_decaying_epsilon(self):
-        self.epsilon = self.epsilon_min + (1 - self.epsilon_min) * math.exp(-1. * self.step / self.epsilon_decay)
-    
     def _linearly_decaying_epsilon(self):
         self.epsilon = max(self.epsilon_min, 1 - self.step*(1 - self.epsilon_min)/self.epsilon_decay)
+    
+    def _exponentially_decaying_epsilon(self):
+        self.epsilon = self.epsilon_min + (1 - self.epsilon_min) * math.exp(-1. * self.step / self.epsilon_decay)
     
     def greedy_action(self, state):
         with torch.no_grad():
