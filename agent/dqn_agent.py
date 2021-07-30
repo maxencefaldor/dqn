@@ -120,14 +120,12 @@ class DQNAgent(object):
             return random.randint(0, self.n_actions - 1)
     
     def _hard_update_target_network(self):
-        """Periodically update the target network.
-        """
+        """Periodically update the target network."""
         if self.step % self.beta == 0:
             self.target_network.load_state_dict(self.network.state_dict())
     
     def _soft_update_target_network(self):
-        """Soft update the target network
-        """
+        """Soft update the target network"""
         for param_network, param_target_network in zip(self.network.parameters(), self.target_network.parameters()):
             param_target_network.data.copy_(param_network * self.beta + param_target_network * (1 - self.beta))
     
@@ -144,8 +142,7 @@ class DQNAgent(object):
             next_state_batch).max(1)[0].unsqueeze(1).detach()
     
     def learn(self):
-        """Learns the Q-value from the replay memory.
-        """
+        """Learns the Q-value from the replay memory."""
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         

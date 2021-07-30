@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Network architectures
+
+Network architectures suited for CartPole and Atari 2600 environments. It
+includes normal and dueling networks.
+"""
 
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 class CartpoleNetwork(nn.Module):
+    """Network architecture suited for CartPole environment."""
+    
     def __init__(self, n_neurons=16):
+        """Creates the layers.
+        
+        Args:
+            n_neurons: int, number of neurons of the hidden layers.
+        """
         super(CartpoleNetwork, self).__init__()
         self.fc1 = nn.Linear(4, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
@@ -19,7 +31,14 @@ class CartpoleNetwork(nn.Module):
         return x
 
 class AtariNetwork(nn.Module):
+    """Network architecture suited for Atari 2600 environment."""
+    
     def __init__(self, n_actions):
+        """Creates the layers.
+        
+        Args:
+            n_actions: int, number of actions possible for the agent.
+        """
         super(AtariNetwork, self).__init__()
         self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
@@ -35,7 +54,14 @@ class AtariNetwork(nn.Module):
         return self.fc2(x)
 
 class DuelingCartpoleNetwork(nn.Module):
+    """Dueling network architecture suited for CartPole environment."""
+    
     def __init__(self, n_neurons=16):
+        """Creates the layers.
+        
+        Args:
+            n_neurons: int, number of neurons of the hidden layers.
+        """
         super(DuelingCartpoleNetwork, self).__init__()
         self.fc1 = nn.Linear(4, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
@@ -50,7 +76,14 @@ class DuelingCartpoleNetwork(nn.Module):
         return value + (advantages - advantages.mean())
 
 class DuelingAtariNetwork(nn.Module):
+    """Dueling network architecture suited for Atari 2600 environment."""
+    
     def __init__(self, n_actions):
+        """Creates the layers.
+        
+        Args:
+            n_actions: int, number of actions possible for the agent.
+        """
         super(DuelingAtariNetwork, self).__init__()
         
         self.conv = nn.Sequential(
