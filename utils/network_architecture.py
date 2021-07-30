@@ -6,11 +6,11 @@ import torch.nn.functional as F
 
 
 class CartpoleNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, n_neurons=16):
         super(CartpoleNetwork, self).__init__()
-        self.fc1 = nn.Linear(4, 16)
-        self.fc2 = nn.Linear(16, 16)
-        self.fc3 = nn.Linear(16, 2)
+        self.fc1 = nn.Linear(4, n_neurons)
+        self.fc2 = nn.Linear(n_neurons, n_neurons)
+        self.fc3 = nn.Linear(n_neurons, 2)
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -35,12 +35,12 @@ class AtariNetwork(nn.Module):
         return self.fc2(x)
 
 class DuelingCartpoleNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, n_neurons=16):
         super(DuelingCartpoleNetwork, self).__init__()
-        self.fc1 = nn.Linear(4, 16)
-        self.fc2 = nn.Linear(16, 16)
-        self.value_stream = nn.Sequential(nn.Linear(16, 1))
-        self.advantage_stream = nn.Sequential(nn.Linear(16, 2))
+        self.fc1 = nn.Linear(4, n_neurons)
+        self.fc2 = nn.Linear(n_neurons, n_neurons)
+        self.value_stream = nn.Sequential(nn.Linear(n_neurons, 1))
+        self.advantage_stream = nn.Sequential(nn.Linear(n_neurons, 2))
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
