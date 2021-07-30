@@ -6,7 +6,7 @@ import torch
 from agent.dqn_agent import DQNAgent
 
 
-class D2QNAgent(DQNAgent):
+class DDQNAgent(DQNAgent):
     """Implementation of the Double DQN agent"""
     
     def __init__(self,
