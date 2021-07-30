@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Implementation of a DQN agent."""
 
 import math
 import random
@@ -16,7 +17,7 @@ from replay_memory import replay_buffer
 
 
 class DQNAgent(object):
-    """Implementation of the DQN agent."""
+    """Implementation of a DQN agent."""
     
     def __init__(self,
                  device,
@@ -79,34 +80,72 @@ class DQNAgent(object):
                              "number in (0, 1). Got: {}".format(beta))
     
     def _linearly_decaying_epsilon(self):
+        """Set epsilon for the epsilon-greedy policy.
+        
+        Linearly decay epsilon from 1. to epsilon_min.
+        """
         self.epsilon = max(self.epsilon_min, 1 - self.step*(1 - self.epsilon_min)/self.epsilon_decay)
     
     def _exponentially_decaying_epsilon(self):
+        """Set epsilon for the epsilon-greedy policy.
+        
+        Exponentially decay epsilon from 1. to epsilon_min.
+        """
         self.epsilon = self.epsilon_min + (1 - self.epsilon_min) * math.exp(-1. * self.step / self.epsilon_decay)
     
     def greedy_action(self, state):
+        """Returns an action following a greedy policy.
+        
+        Args:
+            state: torch.Tensor, state of the agent.
+        
+        Returns:
+            int, greedy action.
+        """
         with torch.no_grad():
             return torch.argmax(self.network(torch.Tensor(state).to(self._device).unsqueeze(0))).item()
     
     def epsilon_greedy_action(self, state):
+        """Returns an action following an epsilon-greedy policy.
+        
+        Args:
+            state: torch.Tensor, state of the agent.
+        
+        Returns:
+            int, epsilon-greedy action.
+        """
         if random.random() > self.epsilon:
             return self.greedy_action(state)
         else:
             return random.randint(0, self.n_actions - 1)
     
     def _hard_update_target_network(self):
+        """Periodically update the target network.
+        """
         if self.step % self.beta == 0:
             self.target_network.load_state_dict(self.network.state_dict())
     
     def _soft_update_target_network(self):
+        """Soft update the target network
+        """
         for param_network, param_target_network in zip(self.network.parameters(), self.target_network.parameters()):
             param_target_network.data.copy_(param_network * self.beta + param_target_network * (1 - self.beta))
     
-    def _target_q(self, next_state_batch):
+    def _next_state_q(self, next_state_batch):
+        """Returns the next_state Q-values
+        
+        Args:
+            next_state_batch: tuple, batch of next state.
+        
+        Returns:
+            torch.Tensor, Q-values of the batch.
+        """
         return self.target_network(
             next_state_batch).max(1)[0].unsqueeze(1).detach()
     
     def learn(self):
+        """Learns the Q-value from the replay memory.
+        """
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         
@@ -130,6 +169,15 @@ class DQNAgent(object):
         self._update_target_network()
     
     def train(self, env, n_episodes):
+        """Trains the Q-network.
+        
+        Args:
+            env: gym.env, Gym environment.
+            n_episodes: int, number of episodes to train for.
+        
+        Returns:
+            list of float, list of episode's return.
+        """
         return_list = []
         for i_episode in range(1, n_episodes+1):
             episode_return = 0
@@ -163,6 +211,13 @@ class DQNAgent(object):
         return return_list
     
     def test(self, env, step_max=np.inf, render_video=True):
+        """Tests the agent in the environment.
+        
+        Args:
+            env: gym.env, Gym environment.
+            step_max: int, maximum number of steps
+            render_video: bool, if True, create a video instead of rendering.
+        """
         if render_video:
             env = Monitor(env, "./tmp", force=True)
         episode_return = 0
@@ -189,7 +244,18 @@ class DQNAgent(object):
                     return
     
     def save(self, path):
+        """Saves the Q-network to a disk file.
+        
+        Args:
+            path: str, path of the disk file.
+        """
         torch.save(self.network.state_dict(), path)
     
     def load(self, path, map_location='cpu'):
+        """Loads a saved Q-network from a disk file.
+        
+        Args:
+            path: str, path of the disk file.
+            map_location: str, string specifying how to remap storage locations
+        """
         self.network.load_state_dict(torch.load(path, map_location=map_location))

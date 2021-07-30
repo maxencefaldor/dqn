@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Implementation of a Double DQN agent."""
 
 import torch
 
@@ -7,7 +8,7 @@ from agent.dqn_agent import DQNAgent
 
 
 class DDQNAgent(DQNAgent):
-    """Implementation of the Double DQN agent"""
+    """Implementation of a Double DQN agent."""
     
     def __init__(self,
                  device,
@@ -54,5 +55,13 @@ class DDQNAgent(DQNAgent):
                           buffer_size=buffer_size,
                           beta=beta)
     
-    def _target_q(self, next_state_batch):
+    def _next_state_q(self, next_state_batch):
+        """Returns the next_state Q-values
+        
+        Args:
+            next_state_batch: tuple, batch of next state.
+        
+        Returns:
+            torch.Tensor, Q-values of the batch.
+        """
         return self.target_network(next_state_batch).gather(1, self.network(next_state_batch).max(1)[1].unsqueeze(1)).detach()
