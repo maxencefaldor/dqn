@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""The standard DQN replay memory.
+
+The replay memory is a circular buffer, supporting multi-step bootstrapping.
+"""
 
 import math
 import random
@@ -11,6 +15,8 @@ Transition = namedtuple("Transition",
                         ("state", "action", "reward", "next_state", "done"))
 
 class ReplayBuffer(object):
+    """Implementation of the standard DQN replay memory."""
+    
     def __init__(self,
                  gamma,
                  n,

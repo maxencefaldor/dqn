@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Prioritized replay memory.
+
+This implementation is based on the paper "Prioritized Experience Replay" by
+Tom Schaul et al. (2015).
+"""
 
 import numpy as np
 from replay_memory.replay_buffer import ReplayBuffer
@@ -7,6 +12,8 @@ from replay_memory.sum_tree import SumTree
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
+    """Implementation of the prioritized replay memory."""
+    
     def __init__(self,
                  gamma,
                  n,
