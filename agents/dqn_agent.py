@@ -43,15 +43,17 @@ class DQNAgent(object):
             lr: float, learning rate.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
-            batch_size: int, batch size.
             n_gradient_steps: int, number of gradient steps taken during a
                 time step.
-            epsilon_min: float, the minimum epsilon value during training.
-            epsilon_decay: int, epsilon decay parameter.
-            buffer_size: int, capacity of the replay buffer.
             beta: float, update period for the target network if beta
                 is a positive integer. Soft update parameter for the target
                 network if beta is a float in (0, 1).
+            epsilon_min: float, the minimum epsilon value during training.
+            epsilon_decay: int, epsilon decay parameter.
+            batch_size: int, batch size.
+            per: bool, If True, use prioritized experience replay, else use
+                uniformly sampled experience replay.
+            buffer_size: int, capacity of the replay buffer.
         """
         self._device = device
         self.n_actions = n_actions
