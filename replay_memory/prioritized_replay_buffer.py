@@ -3,7 +3,7 @@
 """Prioritized replay memory.
 
 This implementation is based on the paper "Prioritized Experience Replay" by
-Tom Schaul et al. (2015).
+Tom Schaul et al. (2015), supporting multi-step bootstrapping.
 """
 
 import numpy as np
