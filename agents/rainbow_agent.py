@@ -65,3 +65,6 @@ class RainbowAgent(DDQNAgent):
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.network.parameters(),
                                     lr=lr, epsilon=0.0003125)
+
+    def project_distribution(supports, weights, target_support):
+        return
