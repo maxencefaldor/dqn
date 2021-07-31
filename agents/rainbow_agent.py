@@ -3,6 +3,8 @@
 """Implementation of a Rainbow agent."""
 
 import torch
+import torch.nn as nn
+import torch.optim as optim
 
 from agents.ddqn_agent import DDQNAgent
 
@@ -59,3 +61,7 @@ class RainbowAgent(DDQNAgent):
                            batch_size=batch_size,
                            per=per,
                            buffer_size=buffer_size)
+        
+        self.criterion = nn.CrossEntropyLoss()
+        self.optimizer = optim.Adam(self.network.parameters(),
+                                    lr=lr, epsilon=0.0003125)
