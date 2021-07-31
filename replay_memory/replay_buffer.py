@@ -18,16 +18,19 @@ class ReplayBuffer(object):
     """Implementation of the standard DQN replay memory."""
     
     def __init__(self,
+                 device,
                  gamma,
                  n,
                  buffer_size=1e6):
         """Initializes the Replay Buffer.
         
         Args:
+            device: `torch.device`, where tensors will be allocated.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
             buffer_size: int, capacity of the buffer.
         """
+        self._device = device
         self._buffer_size = int(buffer_size)
         self._buffer = []
         self._index = 0
@@ -36,6 +39,13 @@ class ReplayBuffer(object):
         self._cumulative_discount_vector = torch.tensor(
             [math.pow(self._gamma, n) for n in range(self._n)],
             dtype=torch.float32)
+        
+        self.indices = None
+        self.states = None
+        self.actions = None
+        self.rewards = None
+        self.next_states = None
+        self.dones = None
     
     def __len__(self):
         """Returns the length of the buffer.
@@ -61,8 +71,7 @@ class ReplayBuffer(object):
         """
         if len(self._buffer) < self._buffer_size:
             self._buffer.append(None)
-        self._buffer[self._index] = (
-            Transition(state, action, reward, next_state, done))
+        self._buffer[self._index] = (Transition(state, action, reward, next_state, done))
         self._index = (self._index + 1) % self._buffer_size
     
     def _sample_index(self, batch_size):
@@ -78,16 +87,17 @@ class ReplayBuffer(object):
             list of ints, a batch of valid indices sampled uniformly.
         """
         if len(self._buffer) < self._buffer_size:
-            return random.sample(
+            self.indices = random.sample(
                 range(0, self._index - self._n + 1),
                 batch_size)
         else:
             shifted_indices = random.sample(
                 range(self._index, self._index + self._buffer_size - self._n + 1),
                 batch_size)
-            return [index % self._buffer_size for index in shifted_indices]
+            self.indices = [index % self._buffer_size
+                            for index in shifted_indices]
     
-    def sample(self, batch_size, indices=None):
+    def sample(self, batch_size):
         """Returns a batch of transitions.
         
         Args:
@@ -99,10 +109,8 @@ class ReplayBuffer(object):
             batch: namedtuple, batch of transitions.
         """
         batch = []
-        if indices is None:
-            indices = self._sample_index(batch_size)
-        
-        for index in indices:
+        self._sample_index(batch_size)
+        for index in self.indices:
             trajectory_indices = [(index + i) % self._buffer_size
                                   for i in range(self._n)]
             trajectory_dones = [self._buffer[i].done
@@ -127,5 +135,11 @@ class ReplayBuffer(object):
                 (index + trajectory_length - 1) % self._buffer_size].next_state
             done = torch.tensor([done], dtype=torch.float32)
             
-            batch.append(Transition(state, action, n_return, next_state, done))
-        return Transition(*zip(*batch))
+            batch.append((state, action, n_return, next_state, done))
+        
+        self.states, self.actions, self.rewards, self.next_states, self.dones = zip(*batch)
+        self.states = torch.stack(self.states).to(self._device)
+        self.actions = torch.stack(self.actions).to(self._device)
+        self.rewards = torch.stack(self.rewards).to(self._device)
+        self.next_states = torch.stack(self.next_states).to(self._device)
+        self.dones = torch.stack(self.dones).to(self._device)

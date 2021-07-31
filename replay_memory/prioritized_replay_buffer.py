@@ -6,6 +6,7 @@ This implementation is based on the paper "Prioritized Experience Replay" by
 Tom Schaul et al. (2015), supporting multi-step bootstrapping.
 """
 
+import torch
 import numpy as np
 from replay_memory.replay_buffer import ReplayBuffer
 from replay_memory.sum_tree import SumTree
@@ -15,6 +16,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     """Implementation of the prioritized replay memory."""
     
     def __init__(self,
+                 device,
                  gamma,
                  n,
                  buffer_size=1e6,
@@ -25,6 +27,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         """Initializes the Prioritized Replay Buffer.
         
         Args:
+            device: `torch.device`, where tensors will be allocated.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
             buffer_size: int, capacity of the buffer.
@@ -34,12 +37,14 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             epsilon: float, small number ensuring priorities are strictly
                 greater than 0.
         """
-        ReplayBuffer.__init__(self, gamma, n, buffer_size)
+        ReplayBuffer.__init__(self, device, gamma, n, buffer_size)
         self.epsilon = epsilon
         self.alpha = alpha
         self.beta = beta
         self.beta_increment_per_sampling = beta_increment_per_sampling
         self.sum_tree = SumTree(self._buffer_size)
+        
+        self.is_weight = None
     
     def _get_priority(self, error):
         """Returns the transition priority.
@@ -103,29 +108,22 @@ class PrioritizedReplayBuffer(ReplayBuffer):
                 while index in invalid_indices:
                     index = self.sum_tree.sample()
                 indices[i] = index
-        return indices
+        self.indices = indices
     
     def sample(self, batch_size):
-        """Returns a batch of transitions, the indices and importance sampling
+        """Sample a batch of transitions, the indices and importance sampling
         weight of the transitions.
         
         Args:
             batch_size: int, batch size.
-        
-        Returns:
-            indices: list of ints, list of indices of the transitions.
-            batch: namedtuple, batch of transitions.
-            is_weight: list of floats, importance sampling weights of the
-                transitions.
         """
-        indices = self._sample_index(batch_size)
-        batch = ReplayBuffer.sample(self, batch_size, indices)
-        priorities = [self.sum_tree.get(index) for index in indices]
+        ReplayBuffer.sample(self, batch_size)
         
         self.beta = np.min([1, self.beta + self.beta_increment_per_sampling])
         
+        priorities = [self.sum_tree.get(index) for index in self.indices]
         sampling_probabilities = priorities / self.sum_tree.total()
         is_weight = np.power(self._buffer_size * sampling_probabilities, -self.beta)
         is_weight /= is_weight.max()
-        
-        return indices, batch, is_weight
+        self.is_weight = torch.tensor(is_weight.reshape(-1, 1),
+                                      dtype=torch.float32).to(self._device)

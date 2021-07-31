@@ -60,13 +60,13 @@ class DDQNAgent(DQNAgent):
                           per=per,
                           buffer_size=buffer_size)
     
-    def _next_state_q(self, next_state_batch):
-        """Returns the next_state Q-values
+    def _next_state_q_values(self, next_states):
+        """Returns the next state Q-values.
         
         Args:
-            next_state_batch: tuple, batch of next state.
+            next_state_batch: `torch.Tensor`, batch of next state.
         
         Returns:
-            torch.Tensor, Q-values of the batch.
+            `torch.Tensor`, next state Q-values.
         """
-        return self.target_network(next_state_batch).gather(1, self.network(next_state_batch).max(1)[1].unsqueeze(1)).detach()
+        return self.target_network(next_states).gather(1, self.network(next_states).max(1)[1].unsqueeze(1)).detach()

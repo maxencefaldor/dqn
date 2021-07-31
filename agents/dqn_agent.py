@@ -60,8 +60,8 @@ class DQNAgent(object):
         self.network = network.to(self._device)
         self.target_network = deepcopy(self.network).to(self._device)
         self.criterion = nn.MSELoss()
-        self.optimizer = optim.RMSprop(network.parameters(), lr=lr)
-        self.gamma = gamma
+        self.optimizer = optim.RMSprop(self.network.parameters(), lr=lr)
+        self.gamma_n = math.pow(gamma, n)
         self.n = n
         self.n_gradient_steps = n_gradient_steps
         self.epsilon = 1
@@ -81,11 +81,13 @@ class DQNAgent(object):
                              "number in (0, 1). Got: {}".format(beta))
         
         if self.per:
-            self.replay_buffer = PrioritizedReplayBuffer(gamma=self.gamma,
+            self.replay_buffer = PrioritizedReplayBuffer(device=self._device,
+                                                         gamma=gamma,
                                                          n=self.n,
                                                          buffer_size=buffer_size)
         else:
-            self.replay_buffer = ReplayBuffer(gamma=self.gamma,
+            self.replay_buffer = ReplayBuffer(device=self._device,
+                                              gamma=gamma,
                                               n=self.n,
                                               buffer_size=buffer_size)
         
@@ -141,50 +143,63 @@ class DQNAgent(object):
         for param_network, param_target_network in zip(self.network.parameters(), self.target_network.parameters()):
             param_target_network.data.copy_(param_network * self.beta + param_target_network * (1 - self.beta))
     
-    def _next_state_q(self, next_state_batch):
-        """Returns the next_state Q-values
+    def _next_state_q_values(self, next_states):
+        """Returns the next state Q-values.
         
         Args:
-            next_state_batch: tuple, batch of next state.
+            next_state_batch: `torch.Tensor`, batch of next state.
         
         Returns:
-            torch.Tensor, Q-values of the batch.
+            `torch.Tensor`, next state Q-values.
         """
         return self.target_network(
-            next_state_batch).max(1)[0].unsqueeze(1).detach()
+            next_states).max(1)[0].unsqueeze(1).detach()
+    
+    def _target_state_q_values(self, rewards, next_states, dones):
+        """Returns the target Q-values.
+        
+        Args:
+            rewards: `torch.Tensor`, batch of multi-step returns.
+            next_state_q_values: `torch.Tensor`, batch of next state Q-values.
+            dones: `torch.Tensor`, batch indicating if the transition is
+                terminal.
+        
+        Returns:
+            `torch.Tensor`, target Q-values.
+        """
+        next_state_q_values = self._next_state_q_values(next_states)
+        return rewards + self.gamma_n * next_state_q_values * (1 - dones)
     
     def learn(self):
         """Learns the Q-value from the replay memory."""
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         
-        if self.per:
-            indices, batch, is_weights = self.replay_buffer.sample(self.batch_size)
-        else:
-            batch = self.replay_buffer.sample(self.batch_size)
+        self.replay_buffer.sample(self.batch_size)
         
-        state_batch = torch.stack(batch.state).to(self._device)
-        action_batch = torch.stack(batch.action).to(self._device)
-        reward_batch = torch.stack(batch.reward).to(self._device)
-        next_state_batch = torch.stack(batch.next_state).to(self._device)
-        done_batch = torch.stack(batch.done).to(self._device)
+        states = self.replay_buffer.states
+        actions = self.replay_buffer.actions
+        rewards = self.replay_buffer.rewards
+        next_states = self.replay_buffer.next_states
+        dones = self.replay_buffer.dones
         
-        state_action_values = self.network(state_batch).gather(1, action_batch)
-        next_state_action_values = self._next_state_q(next_state_batch)
-        expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
+        state_q_values = self.network(states).gather(1, actions)
+        target_state_q_values = self._target_state_q_values(rewards,
+                                                            next_states,
+                                                            dones)
         
         if self.per:
-            errors = state_action_values - expected_state_action_values
-            for i, index in enumerate(indices):
+            errors = state_q_values - target_state_q_values
+            for i, index in enumerate(self.replay_buffer.indices):
                 self.replay_buffer.update(index, errors[i][0].item())
-            loss = F.mse_loss(state_action_values,
-                              expected_state_action_values,
+            
+            loss = F.mse_loss(state_q_values,
+                              target_state_q_values,
                               reduction='none')
-            loss *= torch.tensor(is_weights.reshape(-1, 1),
-                                 dtype=torch.float32).to(self._device)
+            loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
-            loss = self.criterion(state_action_values, expected_state_action_values)
+            loss = self.criterion(state_q_values, target_state_q_values)
         
         self.optimizer.zero_grad()
         loss.backward()
