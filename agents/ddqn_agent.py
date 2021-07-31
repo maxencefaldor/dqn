@@ -4,7 +4,7 @@
 
 import torch
 
-from agent.dqn_agent import DQNAgent
+from agents.dqn_agent import DQNAgent
 
 
 class DDQNAgent(DQNAgent):
