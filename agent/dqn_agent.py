@@ -168,7 +168,7 @@ class DQNAgent(object):
         done_batch = torch.stack(batch.done).to(self._device)
         
         state_action_values = self.network(state_batch).gather(1, action_batch)
-        next_state_action_values = self._target_q(next_state_batch)
+        next_state_action_values = self._next_state_q(next_state_batch)
         expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
         
         if self.per:
