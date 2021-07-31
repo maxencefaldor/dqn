@@ -17,12 +17,13 @@ class DDQNAgent(DQNAgent):
                  lr=0.001,
                  gamma=0.99,
                  n=1,
-                 batch_size=32,
                  n_gradient_steps=1,
+                 beta=1,
                  epsilon_min=0.01,
                  epsilon_decay=2000,
-                 buffer_size=1e6,
-                 beta=1):
+                 batch_size=32,
+                 per=False,
+                 buffer_size=1e6):
         """Initializes the agent.
         
         Args:
@@ -48,12 +49,13 @@ class DDQNAgent(DQNAgent):
                           lr=lr,
                           gamma=gamma,
                           n=n,
-                          batch_size=batch_size,
                           n_gradient_steps=n_gradient_steps,
+                          beta=beta,
                           epsilon_min=epsilon_min,
                           epsilon_decay=epsilon_decay,
-                          buffer_size=buffer_size,
-                          beta=beta)
+                          batch_size=batch_size,
+                          per=per,
+                          buffer_size=buffer_size)
     
     def _next_state_q(self, next_state_batch):
         """Returns the next_state Q-values

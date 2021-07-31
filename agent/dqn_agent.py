@@ -13,7 +13,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-from replay_memory import replay_buffer
+from replay_memory.replay_buffer import ReplayBuffer
+from replay_memory.prioritized_replay_buffer import PrioritizedReplayBuffer
 
 
 class DQNAgent(object):
@@ -26,12 +27,13 @@ class DQNAgent(object):
                  lr=0.001,
                  gamma=0.99,
                  n=1,
-                 batch_size=32,
                  n_gradient_steps=1,
+                 beta=1,
                  epsilon_min=0.01,
                  epsilon_decay=2000,
-                 buffer_size=1e6,
-                 beta=1):
+                 batch_size=32,
+                 per=False,
+                 buffer_size=1e6):
         """Initializes the agent.
         
         Args:
@@ -59,15 +61,12 @@ class DQNAgent(object):
         self.optimizer = optim.RMSprop(network.parameters(), lr=lr)
         self.gamma = gamma
         self.n = n
-        self.batch_size = batch_size
         self.n_gradient_steps = n_gradient_steps
         self.epsilon = 1
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
-        self.replay_buffer = replay_buffer.ReplayBuffer(gamma=self.gamma,
-                                                        n=self.n,
-                                                        buffer_size=buffer_size)
-        self.step = 0
+        self.batch_size = batch_size
+        self.per = per
         
         if beta > 0 and beta < 1:
             self.beta = beta
@@ -78,6 +77,17 @@ class DQNAgent(object):
         else:
             raise ValueError("Beta should be a positive integer or a real "
                              "number in (0, 1). Got: {}".format(beta))
+        
+        if self.per:
+            self.replay_buffer = PrioritizedReplayBuffer(gamma=self.gamma,
+                                                         n=self.n,
+                                                         buffer_size=buffer_size)
+        else:
+            self.replay_buffer = ReplayBuffer(gamma=self.gamma,
+                                              n=self.n,
+                                              buffer_size=buffer_size)
+        
+        self.step = 0
     
     def _linearly_decaying_epsilon(self):
         """Set epsilon for the epsilon-greedy policy.
@@ -146,7 +156,10 @@ class DQNAgent(object):
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         
-        batch = self.replay_buffer.sample(self.batch_size)
+        if self.per:
+            indices, batch, is_weights = self.replay_buffer.sample(self.batch_size)
+        else:
+            batch = self.replay_buffer.sample(self.batch_size)
         
         state_batch = torch.stack(batch.state).to(self._device)
         action_batch = torch.stack(batch.action).to(self._device)
@@ -158,7 +171,18 @@ class DQNAgent(object):
         next_state_action_values = self._target_q(next_state_batch)
         expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
         
-        loss = self.criterion(state_action_values, expected_state_action_values)
+        if self.per:
+            errors = state_action_values - expected_state_action_values
+            for i, index in enumerate(indices):
+                self.replay_buffer.update(index, errors[i][0].item())
+            loss = F.mse_loss(state_action_values,
+                              expected_state_action_values,
+                              reduction='none')
+            loss *= torch.tensor(is_weights.reshape(-1, 1),
+                                 dtype=torch.float32).to(self._device)
+            loss = loss.mean()
+        else:
+            loss = self.criterion(state_action_values, expected_state_action_values)
         
         self.optimizer.zero_grad()
         loss.backward()
