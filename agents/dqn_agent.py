@@ -58,8 +58,8 @@ class DQNAgent(object):
         self.network = network.to(self._device)
         self.target_network = deepcopy(self.network).to(self._device)
         self.criterion = nn.MSELoss()
-        self.optimizer = optim.RMSprop(network.parameters(), lr=lr)
-        self.gamma = gamma
+        self.optimizer = optim.RMSprop(self.network.parameters(), lr=lr)
+        self.gamma_n = math.pow(gamma, n)
         self.n = n
         self.n_gradient_steps = n_gradient_steps
         self.epsilon = 1
@@ -79,11 +79,11 @@ class DQNAgent(object):
                              "number in (0, 1). Got: {}".format(beta))
         
         if self.per:
-            self.replay_buffer = PrioritizedReplayBuffer(gamma=self.gamma,
+            self.replay_buffer = PrioritizedReplayBuffer(gamma=gamma,
                                                          n=self.n,
                                                          buffer_size=buffer_size)
         else:
-            self.replay_buffer = ReplayBuffer(gamma=self.gamma,
+            self.replay_buffer = ReplayBuffer(gamma=gamma,
                                               n=self.n,
                                               buffer_size=buffer_size)
         
@@ -169,7 +169,7 @@ class DQNAgent(object):
         
         state_action_values = self.network(state_batch).gather(1, action_batch)
         next_state_action_values = self._next_state_q(next_state_batch)
-        expected_state_action_values = reward_batch + self.gamma**self.n * next_state_action_values * (1 - done_batch)
+        expected_state_action_values = reward_batch + self.gamma_n * next_state_action_values * (1 - done_batch)
         
         if self.per:
             errors = state_action_values - expected_state_action_values
