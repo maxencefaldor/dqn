@@ -3,6 +3,7 @@
 """Implementation of a Double DQN agent."""
 
 import torch
+import torch.nn as nn
 
 from agents.dqn_agent import DQNAgent
 
@@ -15,6 +16,7 @@ class DDQNAgent(DQNAgent):
                  n_actions,
                  network,
                  lr=0.001,
+                 criterion=nn.MSELoss,
                  gamma=0.99,
                  n=1,
                  n_gradient_steps=1,
@@ -31,6 +33,7 @@ class DDQNAgent(DQNAgent):
             n_actions: int, number of actions the agent can take.
             network: `torch.nn`, neural network used to approximate Q.
             lr: float, learning rate.
+            criterion: `nn.modules.loss`, loss used to train the network.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
             n_gradient_steps: int, number of gradient steps taken during a
@@ -50,6 +53,7 @@ class DDQNAgent(DQNAgent):
                           n_actions=n_actions,
                           network=network,
                           lr=lr,
+                          criterion=criterion,
                           gamma=gamma,
                           n=n,
                           n_gradient_steps=n_gradient_steps,

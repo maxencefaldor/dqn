@@ -25,6 +25,7 @@ class DQNAgent(object):
                  n_actions,
                  network,
                  lr=0.001,
+                 criterion=nn.MSELoss,
                  gamma=0.99,
                  n=1,
                  n_gradient_steps=1,
@@ -41,6 +42,7 @@ class DQNAgent(object):
             n_actions: int, number of actions the agent can take.
             network: `torch.nn`, neural network used to approximate Q.
             lr: float, learning rate.
+            criterion: `nn.modules.loss`, loss used to train the network.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
             n_gradient_steps: int, number of gradient steps taken during a
@@ -59,7 +61,6 @@ class DQNAgent(object):
         self.n_actions = n_actions
         self.network = network.to(self._device)
         self.target_network = deepcopy(self.network).to(self._device)
-        self.criterion = nn.MSELoss()
         self.optimizer = optim.RMSprop(self.network.parameters(), lr=lr)
         self.gamma_n = math.pow(gamma, n)
         self.n = n
@@ -85,11 +86,13 @@ class DQNAgent(object):
                                                          gamma=gamma,
                                                          n=self.n,
                                                          buffer_size=buffer_size)
+            self.criterion = criterion(reduction='none')
         else:
             self.replay_buffer = ReplayBuffer(device=self._device,
                                               gamma=gamma,
                                               n=self.n,
                                               buffer_size=buffer_size)
+            self.criterion = criterion()
         
         self.step = 0
     
@@ -117,7 +120,8 @@ class DQNAgent(object):
             int, greedy action.
         """
         with torch.no_grad():
-            return torch.argmax(self.network(torch.Tensor(state).to(self._device).unsqueeze(0))).item()
+            _, _, q_values = self.network(torch.Tensor(state).to(self._device).unsqueeze(0))
+            return torch.argmax(q_values).item()
     
     def epsilon_greedy_action(self, state):
         """Returns an action following an epsilon-greedy policy.
@@ -193,9 +197,8 @@ class DQNAgent(object):
             for i, index in enumerate(self.replay_buffer.indices):
                 self.replay_buffer.update(index, errors[i][0].item())
             
-            loss = F.mse_loss(state_q_values,
-                              target_state_q_values,
-                              reduction='none')
+            loss = self.criterion(state_q_values,
+                                  target_state_q_values)
             loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
