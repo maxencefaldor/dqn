@@ -76,6 +76,19 @@ class RainbowAgent(DDQNAgent):
         self.optimizer = optim.Adam(self.network.parameters(),
                                     lr=lr, eps=0.0003125)
     
+    def greedy_action(self, state):
+        """Returns an action following a greedy policy.
+        
+        Args:
+            state: torch.Tensor, state of the agent.
+        
+        Returns:
+            int, greedy action.
+        """
+        with torch.no_grad():
+            _, _, q_values = self.network(torch.Tensor(state).to(self._device).unsqueeze(0))
+            return torch.argmax(q_values).item()
+    
     def _target_state_q_values(self, rewards, next_states, dones):
         tiled_support = self.support.tile((self.batch_size, 1))
         target_support = rewards + self.gamma_n * tiled_support * (1 - dones)
@@ -121,9 +134,10 @@ class RainbowAgent(DDQNAgent):
         logits, _, _ = self.network(states)
         state_q_values = torch.stack(
             [logits[i, actions.view(-1)[i], :] for i in range(self.batch_size)])
-        target_state_q_values = self._target_state_q_values(rewards,
-                                                            next_states,
-                                                            dones)
+        with torch.no_grad():
+            target_state_q_values = self._target_state_q_values(rewards,
+                                                                next_states,
+                                                                dones)
         
         if self.per:
             loss = -torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
