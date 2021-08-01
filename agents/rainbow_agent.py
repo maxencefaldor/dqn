@@ -72,7 +72,7 @@ class RainbowAgent(DDQNAgent):
         self.n_atoms = n_atoms
         self.v_min = v_min
         self.v_max = v_max
-        self.support = torch.linspace(self.v_min, self.v_max, n_atoms)
+        self.support = torch.linspace(self.v_min, self.v_max, n_atoms, device=self._device)
         self.optimizer = optim.Adam(self.network.parameters(),
                                     lr=lr, eps=0.0003125)
     
@@ -83,7 +83,7 @@ class RainbowAgent(DDQNAgent):
         logits, probabilities, q_values = self.target_network(next_states)
         max_actions = q_values.max(1)[1]
         next_probabilities = torch.stack(
-            [probabilities[i, max_actions[i], :] for i in range(32)])
+            [probabilities[i, max_actions[i], :] for i in range(self.batch_size)])
         
         return self._project_distribution(
             target_support, next_probabilities).detach()
@@ -120,23 +120,24 @@ class RainbowAgent(DDQNAgent):
         
         logits, _, _ = self.network(states)
         state_q_values = torch.stack(
-            [logits[i, actions.view(-1)[i], :] for i in range(32)])
+            [logits[i, actions.view(-1)[i], :] for i in range(self.batch_size)])
         target_state_q_values = self._target_state_q_values(rewards,
                                                             next_states,
                                                             dones)
         
         if self.per:
-            errors = state_q_values - target_state_q_values
+            loss = -torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
+                              dim=1).unsqueeze(1)
+            
+            errors = loss
             for i, index in enumerate(self.replay_buffer.indices):
                 self.replay_buffer.update(index, errors[i][0].item())
-            
-            loss = torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
-                             dim=1).unsqueeze(1)
+
             loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
-            loss = torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
-                             dim=1).unsqueeze(1)
+            loss = -torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
+                              dim=1).unsqueeze(1)
             loss = loss.mean()
         
         self.optimizer.zero_grad()

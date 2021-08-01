@@ -118,7 +118,7 @@ class DuelingAtariNetwork(nn.Module):
 class C51CartpoleNetwork(nn.Module):
     """C51 Network architecture suited for CartPole environment."""
     
-    def __init__(self, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, device, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
@@ -144,7 +144,7 @@ class C51CartpoleNetwork(nn.Module):
 class C51AtariNetwork(nn.Module):
     """C51 Network architecture suited for Atari 2600 environment."""
     
-    def __init__(self, n_actions, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, device, n_actions, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
@@ -154,7 +154,7 @@ class C51AtariNetwork(nn.Module):
         super(C51AtariNetwork, self).__init__()
         self.n_actions = n_actions
         self.n_atoms = n_atoms
-        self.support = torch.linspace(v_min, v_max, n_atoms)
+        self.support = torch.linspace(v_min, v_max, n_atoms, device=device)
         self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
