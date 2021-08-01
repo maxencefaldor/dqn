@@ -120,8 +120,7 @@ class DQNAgent(object):
             int, greedy action.
         """
         with torch.no_grad():
-            _, _, q_values = self.network(torch.Tensor(state).to(self._device).unsqueeze(0))
-            return torch.argmax(q_values).item()
+            return torch.argmax(self.network(torch.Tensor(state).to(self._device).unsqueeze(0))).item()
     
     def epsilon_greedy_action(self, state):
         """Returns an action following an epsilon-greedy policy.
