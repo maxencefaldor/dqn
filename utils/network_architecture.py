@@ -130,7 +130,7 @@ class C51CartpoleNetwork(nn.Module):
         self.support = torch.linspace(v_min, v_max, n_atoms)
         self.fc1 = nn.Linear(4, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
-        self.fc3 = nn.Linear(n_neurons, 2)
+        self.fc3 = nn.Linear(n_neurons, 2*n_atoms)
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
