@@ -6,7 +6,7 @@ Implementation of the DQN algorithm and six independent improvements as describe
 - Double DQN [[3]](#references)
 - Prioritized Experience Replay [[4]](#references)
 - Dueling Network Architecture [[5]](#references)
-- Multi-step Returns [[6]](#references)
+- Multi-step Bootstrapping [[6]](#references)
 - Distributional RL [[7]](#references)
 - Noisy Networks [[8]](#references)
 
