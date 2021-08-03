@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Implementation of a DQN agent."""
+"""Implementation of a DQN agent.
 
+The algorithm and default hyperparameters follow "Playing Atari with Deep
+Reinforcement Learning", Mnih et al. (2013).
+
+In addition to this, the agent can perform
+    * prioritized experience replay
+    * multi-step bootstrapping
+"""
+
+import os
 import math
 import random
 from copy import deepcopy
 from itertools import count
+from gym.wrappers.monitoring.video_recorder import VideoRecorder
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 
 from replay_memory.replay_buffer import ReplayBuffer
 from replay_memory.prioritized_replay_buffer import PrioritizedReplayBuffer
@@ -33,29 +42,29 @@ class DQNAgent(object):
                  epsilon_min=0.01,
                  epsilon_decay=2000,
                  batch_size=32,
-                 per=False,
-                 buffer_size=1e6):
+                 buffer_size=1e6,
+                 per=False):
         """Initializes the agent.
         
         Args:
             device: `torch.device`, where tensors will be allocated.
-            n_actions: int, number of actions the agent can take.
-            network: `torch.nn`, neural network used to approximate Q.
+            n_actions: int, number of actions the agent can take at any state.
+            network: `torch.nn`, neural network used to approximate the
+                Q-value.
             lr: float, learning rate.
             criterion: `nn.modules.loss`, loss used to train the network.
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
-            n_gradient_steps: int, number of gradient steps taken during a
-                time step.
+            n_gradient_steps: int, number of gradient steps taken by time step.
             beta: float, update period for the target network if beta
                 is a positive integer. Soft update parameter for the target
                 network if beta is a float in (0, 1).
             epsilon_min: float, the minimum epsilon value during training.
             epsilon_decay: int, epsilon decay parameter.
             batch_size: int, batch size.
+            buffer_size: int, capacity of the replay buffer.
             per: bool, If True, use prioritized experience replay, else use
                 uniformly sampled experience replay.
-            buffer_size: int, capacity of the replay buffer.
         """
         self._device = device
         self.n_actions = n_actions
@@ -96,25 +105,25 @@ class DQNAgent(object):
         
         self.step = 0
     
-    def _linearly_decaying_epsilon(self):
-        """Set epsilon for the epsilon-greedy policy.
-        
-        Linearly decay epsilon from 1. to epsilon_min.
+    def _linearly_decay_epsilon(self):
+        """Linearly decay epsilon from 1. to epsilon_min according to
+        self.step for the epsilon-greedy policy.
         """
-        self.epsilon = max(self.epsilon_min, 1 - self.step*(1 - self.epsilon_min)/self.epsilon_decay)
+        self.epsilon = max(self.epsilon_min, 1 - self.step*(
+            1 - self.epsilon_min)/self.epsilon_decay)
     
-    def _exponentially_decaying_epsilon(self):
-        """Set epsilon for the epsilon-greedy policy.
-        
-        Exponentially decay epsilon from 1. to epsilon_min.
+    def _exponentially_decay_epsilon(self):
+        """Exponentially decay epsilon from 1. to epsilon_min according to
+        self.step for the epsilon-greedy policy.
         """
-        self.epsilon = self.epsilon_min + (1 - self.epsilon_min) * math.exp(-1. * self.step / self.epsilon_decay)
+        self.epsilon = self.epsilon_min + (1 - self.epsilon_min) * math.exp(
+            -self.step/self.epsilon_decay)
     
     def greedy_action(self, state):
-        """Returns an action following a greedy policy.
+        """Returns an action following the greedy policy.
         
         Args:
-            state: torch.Tensor, state of the agent.
+            state: `torch.Tensor`, state of the agent.
         
         Returns:
             int, greedy action.
@@ -123,10 +132,10 @@ class DQNAgent(object):
             return torch.argmax(self.network(torch.Tensor(state).to(self._device).unsqueeze(0))).item()
     
     def epsilon_greedy_action(self, state):
-        """Returns an action following an epsilon-greedy policy.
+        """Returns an action following the epsilon-greedy policy.
         
         Args:
-            state: torch.Tensor, state of the agent.
+            state: `torch.Tensor`, state of the agent.
         
         Returns:
             int, epsilon-greedy action.
@@ -174,7 +183,7 @@ class DQNAgent(object):
         return rewards + self.gamma_n * next_state_q_values * (1 - dones)
     
     def learn(self):
-        """Learns the Q-value from the replay memory."""
+        """Learns the Q-value from experience replay."""
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         
@@ -194,10 +203,9 @@ class DQNAgent(object):
         if self.per:
             errors = state_q_values - target_state_q_values
             for i, index in enumerate(self.replay_buffer.indices):
-                self.replay_buffer.update(index, errors[i][0].item())
+                self.replay_buffer.update(index, errors[i].item())
             
-            loss = self.criterion(state_q_values,
-                                  target_state_q_values)
+            loss = self.criterion(state_q_values, target_state_q_values)
             loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
@@ -209,28 +217,31 @@ class DQNAgent(object):
         self._update_target_network()
     
     def train(self, env, n_episodes):
-        """Trains the Q-network.
+        """Trains the agent in the environment for n_episodes episodes.
         
         Args:
-            env: gym.env, Gym environment.
+            env: Gym environment.
             n_episodes: int, number of episodes to train for.
         
         Returns:
-            list of float, list of episode's return.
+            list of floats, list of returns.
         """
         return_list = []
         for i_episode in range(1, n_episodes+1):
             episode_return = 0
             state = env.reset()
             for t in count():
-                self._linearly_decaying_epsilon()
+                self._linearly_decay_epsilon()
                 action = self.epsilon_greedy_action(state)
                 next_state, reward, done, _ = env.step(action)
                 
-                self.replay_buffer.add(torch.tensor(state, dtype=torch.float32),
-                                       torch.tensor([action], dtype=torch.long),
+                self.replay_buffer.add(torch.tensor(state,
+                                                    dtype=torch.float32),
+                                       torch.tensor([action],
+                                                    dtype=torch.long),
                                        reward,
-                                       torch.tensor(next_state, dtype=torch.float32),
+                                       torch.tensor(next_state,
+                                                    dtype=torch.float32),
                                        done)
                 state = next_state
                 episode_return += reward
@@ -241,47 +252,57 @@ class DQNAgent(object):
                 
                 if done:
                     return_list.append(episode_return)
-                    print("Episode {:4d} : {:4d} steps | epsilon = {:4.2f} | return = {:.1f}"
-                          .format(i_episode, t+1, self.epsilon, episode_return))
+                    print("Episode {:4d} : {:4d} steps | epsilon = {:4.2f} "
+                          "| return = {:.1f}".format(i_episode, t+1,
+                                                     self.epsilon,
+                                                     episode_return))
                     
                     if return_list and episode_return >= max(return_list):
                         self.save("model.pt")
+                    
                     break
-            
+        
         return return_list
     
-    def test(self, env, step_max=np.inf, render_video=True):
-        """Tests the agent in the environment.
+    def test(self, env, n_steps=np.inf, agent_name=None):
+        """Tests the agent in the environment for one episode and at most
+        n_steps time steps.
+        
+        If agent_name is not None, record a video of the episode and write it
+        to a disk file `videos/{env.spec.id}-{agent_name}.mp4`.
         
         Args:
-            env: gym.env, Gym environment.
-            step_max: int, maximum number of steps
-            render_video: bool, if True, create a video instead of rendering.
+            env: Gym environment.
+            n_steps: int, maximum number of steps.
+            agent_name: str, filename of the recorded video. If None, the
+                episode is not recorded.
         """
-        if render_video:
-            env = Monitor(env, "./tmp", force=True)
+        if agent_name:
+            if not os.path.exists("videos"):
+                os.mkdir("videos")
+            recorder = VideoRecorder(env,
+                                     base_path="videos/{}-{}"
+                                     .format(env.spec.id, agent_name))
+            
         episode_return = 0
         state = env.reset()
         for t in count():
-            if not render_video:
+            if agent_name:
+                recorder.capture_frame()
+            else:
                 env.render()
+            
             action = self.greedy_action(state)
             next_state, reward, done, _ = env.step(action)
 
             episode_return += reward
             state = next_state
 
-            if done or t+1 >= step_max:
+            if done or t+1 >= n_steps:
+                if agent_name:
+                    recorder.close()
                 env.close()
-                if render_video:
-                    video = io.open("./tmp/openaigym.video.{}.video000000.mp4".format(env.file_infix), 'r+b').read()
-                    encoded = base64.b64encode(video)
-                    return HTML(data='''
-                        <video width="360" height="auto" alt="test" controls><source src="data:video/mp4;base64,{0}" type="video/mp4" /></video>'''
-                    .format(encoded.decode('ascii')))
-                    shutil.rmtree("./tmp")
-                else:
-                    return
+                return episode_return
     
     def save(self, path):
         """Saves the Q-network to a disk file.
@@ -296,6 +317,8 @@ class DQNAgent(object):
         
         Args:
             path: str, path of the disk file.
-            map_location: str, string specifying how to remap storage locations
+            map_location: str, string specifying how to remap storage
+                locations.
         """
-        self.network.load_state_dict(torch.load(path, map_location=map_location))
+        self.network.load_state_dict(torch.load(path,
+                                                map_location=map_location))

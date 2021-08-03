@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Implementation of a Rainbow agent."""
+"""Implementation of a Rainbow agent.
+
+Implementation of the DQN algorithm and six independent improvements as
+described in "Rainbow: Combining Improvements in Deep Reinforcement Learning",
+Hessel et al. (2017).
+
+Specifically, the 6 improvements are:
+    * double DQN
+    * prioritized experience replay
+    * dueling network architecture
+    * multi-step bootstrapping
+    * distributional RL (C51)
+    * noisy networks
+"""
 
 import torch
 import torch.nn as nn
@@ -29,29 +42,32 @@ class RainbowAgent(DDQNAgent):
                  epsilon_min=0.01,
                  epsilon_decay=2000,
                  batch_size=32,
-                 per=True,
-                 buffer_size=1e6):
+                 buffer_size=1e6,
+                 per=True):
         """Initializes the agent.
         
         Args:
             device: `torch.device`, where tensors will be allocated.
-            n_actions: int, number of actions the agent can take.
-            network: `torch.nn`, neural network used to approximate Q.
+            n_actions: int, number of actions the agent can take at any state.
+            network: `torch.nn`, neural network used to approximate the
+                Q-value.
             lr: float, learning rate.
             criterion: `nn.modules.loss`, loss used to train the network.
+            n_atoms: int, the number of bins of the value distribution.
+            v_min: float, the value distribution support is [v_min, v_max].
+            v_max: float, the value distribution support is [v_min, v_max].
             gamma: float, discount rate.
             n: int, number of steps of bootstrapping.
-            n_gradient_steps: int, number of gradient steps taken during a
-                time step.
+            n_gradient_steps: int, number of gradient steps taken by time step.
             beta: float, update period for the target network if beta
                 is a positive integer. Soft update parameter for the target
                 network if beta is a float in (0, 1).
             epsilon_min: float, the minimum epsilon value during training.
             epsilon_decay: int, epsilon decay parameter.
             batch_size: int, batch size.
+            buffer_size: int, capacity of the replay buffer.
             per: bool, If True, use prioritized experience replay, else use
                 uniformly sampled experience replay.
-            buffer_size: int, capacity of the replay buffer.
         """
         DDQNAgent.__init__(self,
                            device=device,
@@ -77,10 +93,10 @@ class RainbowAgent(DDQNAgent):
                                     lr=lr, eps=0.0003125)
     
     def greedy_action(self, state):
-        """Returns an action following a greedy policy.
+        """Returns an action following the greedy policy.
         
         Args:
-            state: torch.Tensor, state of the agent.
+            state: `torch.Tensor`, state of the agent.
         
         Returns:
             int, greedy action.
@@ -119,7 +135,7 @@ class RainbowAgent(DDQNAgent):
         return torch.sum(inner_prod, 2)
 
     def learn(self):
-        """Learns the Q-value from the replay memory."""
+        """Learns the Q-value from experience replay."""
         if len(self.replay_buffer) - self.n + 1 < self.batch_size:
             return
         

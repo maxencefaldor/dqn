@@ -8,7 +8,7 @@ Implementation of the DQN algorithm and six independent improvements as describe
 - Dueling Network Architecture [[5]](#references)
 - Multi-step Returns [[6]](#references)
 - Distributional RL [[7]](#references)
-- Noisy Nets [[8]](#references)
+- Noisy Networks [[8]](#references)
 
 # Requirements
 
@@ -24,11 +24,11 @@ Implementation of the DQN algorithm and six independent improvements as describe
 
 # References
 
-[1] [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298), Hessel et al, 2017.  
-[2] [Playing Atari with Deep Reinforcement Learning](http://arxiv.org/abs/1312.5602), Mnih et al, 2013  
-[3] [Deep Reinforcement Learning with Double Q-learning](http://arxiv.org/abs/1509.06461), Hasselt et al 2015.  
-[4] [Prioritized Experience Replay](http://arxiv.org/abs/1511.05952), Schaul et al, 2015.  
-[5] [Dueling Network Architectures for Deep Reinforcement Learning](http://arxiv.org/abs/1511.06581), Wang et al, 2015.  
+[1] [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298), Hessel et al., 2017.  
+[2] [Playing Atari with Deep Reinforcement Learning](http://arxiv.org/abs/1312.5602), Mnih et al., 2013.  
+[3] [Deep Reinforcement Learning with Double Q-learning](http://arxiv.org/abs/1509.06461), Hasselt et al., 2015.  
+[4] [Prioritized Experience Replay](http://arxiv.org/abs/1511.05952), Schaul et al., 2015.  
+[5] [Dueling Network Architectures for Deep Reinforcement Learning](http://arxiv.org/abs/1511.06581), Wang et al., 2015.  
 [6] [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/sutton/book/ebook/the-book.html), Sutton and Barto, 1998.  
-[7] [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887), Bellemare et al, 2017.  
-[8] [Noisy Networks for Exploration](https://arxiv.org/abs/1706.10295), Fortunato et al, 2017.  
+[7] [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887), Bellemare et al., 2017.  
+[8] [Noisy Networks for Exploration](https://arxiv.org/abs/1706.10295), Fortunato et al., 2017.  
