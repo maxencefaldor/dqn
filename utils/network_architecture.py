@@ -3,7 +3,7 @@
 """Network architectures
 
 Network architectures suited for CartPole and Atari 2600 environments. It
-includes normal and dueling networks.
+includes normal, dueling and distributional networks.
 """
 
 import torch
