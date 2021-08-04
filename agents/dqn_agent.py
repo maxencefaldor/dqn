@@ -201,7 +201,7 @@ class DQNAgent(object):
                                                             dones)
         
         if self.per:
-            errors = state_q_values - target_state_q_values
+            errors = target_state_q_values - state_q_values
             for i, index in enumerate(self.replay_buffer.indices):
                 self.replay_buffer.update(index, errors[i].item())
             

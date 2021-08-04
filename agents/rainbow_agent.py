@@ -31,7 +31,6 @@ class RainbowAgent(DDQNAgent):
                  n_actions,
                  network,
                  lr=0.001,
-                 criterion=nn.CrossEntropyLoss,
                  n_atoms=51,
                  v_min=-10.,
                  v_max=10.,
@@ -74,7 +73,6 @@ class RainbowAgent(DDQNAgent):
                            n_actions=n_actions,
                            network=network,
                            lr=lr,
-                           criterion=criterion,
                            gamma=gamma,
                            n=n,
                            n_gradient_steps=n_gradient_steps,
@@ -91,33 +89,38 @@ class RainbowAgent(DDQNAgent):
         self.support = torch.linspace(self.v_min, self.v_max, n_atoms, device=self._device)
         self.optimizer = optim.Adam(self.network.parameters(),
                                     lr=lr, eps=0.0003125)
+        self.criterion = self._cross_entropy_with_logits
     
-    def greedy_action(self, state):
-        """Returns an action following the greedy policy.
-        
-        Args:
-            state: `torch.Tensor`, state of the agent.
-        
-        Returns:
-            int, greedy action.
-        """
-        with torch.no_grad():
-            _, _, q_values = self.network(torch.Tensor(state).to(self._device).unsqueeze(0))
-            return torch.argmax(q_values).item()
+    def _cross_entropy_with_logits(self, labels, logits):
+        return -torch.sum(labels * F.log_softmax(logits, dim=1),
+                          dim=1).unsqueeze(1)
     
     def _target_state_q_values(self, rewards, next_states, dones):
         tiled_support = self.support.tile((self.batch_size, 1))
         target_support = rewards + self.gamma_n * tiled_support * (1 - dones)
         
-        logits, probabilities, q_values = self.target_network(next_states)
-        max_actions = q_values.max(1)[1]
-        next_probabilities = torch.stack(
-            [probabilities[i, max_actions[i], :] for i in range(self.batch_size)])
+        distribution = self.target_network.distribution(next_states)
+        max_actions = self.network(next_states).max(1)[1].unsqueeze(1)\
+            .unsqueeze(1).expand(self.batch_size, 1, self.n_atoms)
+        next_distribution = distribution.gather(1, max_actions).squeeze(1)
         
         return self._project_distribution(
-            target_support, next_probabilities).detach()
+            target_support, next_distribution).detach()
     
-    def _project_distribution(self, supports, weights):
+    def _project_distribution(self, supports, distributions):
+        """Projects a batch of supports and distributions onto the base
+        support.
+        
+        This function implements equation 7 in "A Distributional Perspective on
+        Reinforcement Learning", Bellemare et al. (2017).
+        
+        Args:
+            supports: `torch.Tensor`, supports for the distributions.
+            distributions: `torch.Tensor`, probability distributions to project
+                on the base support [-v_min, v_min].
+        
+        Returns: `torch.Tensor`, batch of projected distributions.
+        """
         target_support_deltas = self.support[1:] - self.support[:-1]
         delta_z = target_support_deltas[0]
         
@@ -130,8 +133,8 @@ class RainbowAgent(DDQNAgent):
         numerator = torch.abs(tiled_support - reshaped_target_support)
         clipped_quotient = torch.clamp(1 - (numerator/delta_z), min=0, max=1)
         
-        weights = weights[:, None, :]
-        inner_prod = clipped_quotient * weights
+        distributions = distributions[:, None, :]
+        inner_prod = clipped_quotient * distributions
         return torch.sum(inner_prod, 2)
 
     def learn(self):
@@ -147,27 +150,25 @@ class RainbowAgent(DDQNAgent):
         next_states = self.replay_buffer.next_states
         dones = self.replay_buffer.dones
         
-        logits, _, _ = self.network(states)
-        state_q_values = torch.stack(
-            [logits[i, actions.view(-1)[i], :] for i in range(self.batch_size)])
+        logits = self.network.logits(states)
+        state_q_values = logits.gather(1, actions.unsqueeze(1).expand(
+            self.batch_size, 1, self.n_atoms)).squeeze(1)
         with torch.no_grad():
             target_state_q_values = self._target_state_q_values(rewards,
                                                                 next_states,
                                                                 dones)
         
         if self.per:
-            loss = -torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
-                              dim=1).unsqueeze(1)
+            loss = self.criterion(target_state_q_values, state_q_values)
             
             errors = loss
             for i, index in enumerate(self.replay_buffer.indices):
-                self.replay_buffer.update(index, errors[i][0].item())
+                self.replay_buffer.update(index, errors[i].item())
 
             loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
-            loss = -torch.sum(target_state_q_values * F.log_softmax(state_q_values, dim=1),
-                              dim=1).unsqueeze(1)
+            loss = self.criterion(target_state_q_values, state_q_values)
             loss = loss.mean()
         
         self.optimizer.zero_grad()

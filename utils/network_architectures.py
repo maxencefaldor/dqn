@@ -118,7 +118,7 @@ class DuelingAtariNetwork(nn.Module):
 class C51CartpoleNetwork(nn.Module):
     """C51 Network architecture suited for CartPole environment."""
     
-    def __init__(self, device, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
@@ -127,24 +127,30 @@ class C51CartpoleNetwork(nn.Module):
         super(C51CartpoleNetwork, self).__init__()
         self.neurons = n_neurons
         self.n_atoms = n_atoms
-        self.support = torch.linspace(v_min, v_max, n_atoms)
+        self.register_buffer("support", torch.linspace(v_min, v_max, n_atoms))
+        
         self.fc1 = nn.Linear(4, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
         self.fc3 = nn.Linear(n_neurons, 2*n_atoms)
     
     def forward(self, x):
+        distribution = self.distribution(x)
+        return torch.sum(self.support*distribution, dim=2)
+    
+    def logits(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        logits = x.view(-1, 2, self.n_atoms)
-        probabilities = F.softmax(logits, dim=2)
-        q_values = torch.sum(self.support*probabilities, dim=2)
-        return logits, probabilities, q_values
+        return x.view(-1, 2, self.n_atoms)
+
+    def distribution(self, x):
+        logits = self.logits(x)
+        return F.softmax(logits, dim=2)
 
 class C51AtariNetwork(nn.Module):
     """C51 Network architecture suited for Atari 2600 environment."""
     
-    def __init__(self, device, n_actions, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, n_actions, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
@@ -154,7 +160,8 @@ class C51AtariNetwork(nn.Module):
         super(C51AtariNetwork, self).__init__()
         self.n_actions = n_actions
         self.n_atoms = n_atoms
-        self.support = torch.linspace(v_min, v_max, n_atoms, device=device)
+        self.register_buffer("support", torch.linspace(v_min, v_max, n_atoms))
+        
         self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
@@ -162,12 +169,17 @@ class C51AtariNetwork(nn.Module):
         self.fc2 = nn.Linear(512, n_actions*n_atoms)
     
     def forward(self, x):
+        distribution = self.distribution(x)
+        return torch.sum(self.support*distribution, dim=2)
+    
+    def logits(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = F.relu(self.fc1(x.view(x.size(0), -1)))
         x = self.fc2(x)
-        logits = x.view(-1, self.n_actions, self.n_atoms)
-        probabilities = F.softmax(logits, dim=2)
-        q_values = torch.sum(self.support*probabilities, dim=2)
-        return logits, probabilities, q_values
+        return x.view(-1, self.n_actions, self.n_atoms)
+    
+    def distribution(self, x):
+        logits = self.logits(x)
+        return F.softmax(logits, dim=2)
