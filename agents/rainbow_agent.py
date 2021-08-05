@@ -15,6 +15,8 @@ Specifically, the 6 improvements are:
     * noisy networks
 """
 
+from itertools import count
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -175,3 +177,54 @@ class RainbowAgent(DDQNAgent):
         loss.backward()
         self.optimizer.step()
         self._update_target_network()
+        
+        self.network.reset_noise()
+        self.target_network.reset_noise()
+    
+    def train(self, env, n_episodes):
+        """Trains the agent in the environment for n_episodes episodes.
+        
+        Args:
+            env: Gym environment.
+            n_episodes: int, number of episodes to train for.
+        
+        Returns:
+            list of floats, list of returns.
+        """
+        return_list = []
+        for i_episode in range(1, n_episodes+1):
+            episode_return = 0
+            state = env.reset()
+            for t in count():
+                action = torch.argmax(self.network(
+                    torch.Tensor(state).to(self._device).unsqueeze(0))).item()
+                next_state, reward, done, _ = env.step(action)
+                
+                self.replay_buffer.add(torch.tensor(state,
+                                                    dtype=torch.float32),
+                                       torch.tensor([action],
+                                                    dtype=torch.long),
+                                       reward,
+                                       torch.tensor(next_state,
+                                                    dtype=torch.float32),
+                                       done)
+                state = next_state
+                episode_return += reward
+                self.step += 1
+                
+                for _ in range(self.n_gradient_steps):
+                    self.learn()
+                
+                if done:
+                    return_list.append(episode_return)
+                    print("Episode {:4d} : {:4d} steps | epsilon = {:4.2f} "
+                          "| return = {:.1f}".format(i_episode, t+1,
+                                                     self.epsilon,
+                                                     episode_return))
+                    
+                    if return_list and episode_return >= max(return_list):
+                        self.save("model.pt")
+                    
+                    break
+        
+        return return_list
