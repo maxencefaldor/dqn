@@ -103,6 +103,7 @@ class DQNAgent(object):
                                               buffer_size=buffer_size)
             self.criterion = criterion()
         
+        self.act = self.epsilon_greedy_action
         self.step = 0
     
     def _linearly_decay_epsilon(self):
@@ -234,7 +235,7 @@ class DQNAgent(object):
             state = env.reset()
             for t in count():
                 self._linearly_decay_epsilon()
-                action = self.epsilon_greedy_action(state)
+                action = self.act(state)
                 next_state, reward, done, _ = env.step(action)
                 
                 self.replay_buffer.add(torch.tensor(state,

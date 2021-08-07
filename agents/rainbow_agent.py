@@ -18,7 +18,6 @@ Specifically, the 6 improvements are:
 from itertools import count
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
@@ -44,7 +43,8 @@ class RainbowAgent(DDQNAgent):
                  epsilon_decay=2000,
                  batch_size=32,
                  buffer_size=1e6,
-                 per=True):
+                 per=True,
+                 noisy=True):
         """Initializes the agent.
         
         Args:
@@ -69,6 +69,10 @@ class RainbowAgent(DDQNAgent):
             buffer_size: int, capacity of the replay buffer.
             per: bool, If True, use prioritized experience replay, else use
                 uniformly sampled experience replay.
+            noisy: bool, If True, use a noisy network to drive exploration. The
+                network provided to the agent should be a noisy network and
+                implement a reset_noise method. If False, use the conventional
+                epsilon-greedy heuristic.
         """
         DDQNAgent.__init__(self,
                            device=device,
@@ -88,16 +92,44 @@ class RainbowAgent(DDQNAgent):
         self.n_atoms = n_atoms
         self.v_min = v_min
         self.v_max = v_max
-        self.support = torch.linspace(self.v_min, self.v_max, n_atoms, device=self._device)
+        self.support = torch.linspace(self.v_min, self.v_max, n_atoms,
+                                      device=self._device)
         self.optimizer = optim.Adam(self.network.parameters(),
                                     lr=lr, eps=0.0003125)
         self.criterion = self._cross_entropy_with_logits
+        self.noisy = noisy
+        
+        if self.noisy:
+            self.act = self.greedy_action
+        else:
+            self.act = self.epsilon_greedy_action
     
     def _cross_entropy_with_logits(self, labels, logits):
+        """Returns the cross entropy between labels and logits.
+        
+        Args:
+            labels: `torch.Tensor`, target distributions of size
+                (batch_size, n_actions, n_atoms).
+            logits: `torch.Tensor`, logits of distributions.
+        
+        Returns: `torch.Tensor`, of size (batch_size, 1) cross entropy for each
+            distribution of the batch.
+        """
         return -torch.sum(labels * F.log_softmax(logits, dim=1),
                           dim=1).unsqueeze(1)
     
-    def _target_state_q_values(self, rewards, next_states, dones):
+    def _target_state_distributions(self, rewards, next_states, dones):
+        """Returns the target distributions.
+        
+        Args:
+            rewards: `torch.Tensor`, batch of multi-step returns.
+            next_state_q_values: `torch.Tensor`, batch of next state Q-values.
+            dones: `torch.Tensor`, batch indicating if the transition is
+                terminal.
+        
+        Returns:
+            `torch.Tensor`, target distribution.
+        """
         tiled_support = self.support.tile((self.batch_size, 1))
         target_support = rewards + self.gamma_n * tiled_support * (1 - dones)
         
@@ -153,15 +185,15 @@ class RainbowAgent(DDQNAgent):
         dones = self.replay_buffer.dones
         
         logits = self.network.logits(states)
-        state_q_values = logits.gather(1, actions.unsqueeze(1).expand(
+        state_distributions = logits.gather(1, actions.unsqueeze(1).expand(
             self.batch_size, 1, self.n_atoms)).squeeze(1)
         with torch.no_grad():
-            target_state_q_values = self._target_state_q_values(rewards,
-                                                                next_states,
-                                                                dones)
+            target_state_distributions = self._target_state_distributions(
+                rewards, next_states, dones)
         
         if self.per:
-            loss = self.criterion(target_state_q_values, state_q_values)
+            loss = self.criterion(target_state_distributions,
+                                  state_distributions)
             
             errors = loss
             for i, index in enumerate(self.replay_buffer.indices):
@@ -170,64 +202,14 @@ class RainbowAgent(DDQNAgent):
             loss *= self.replay_buffer.is_weight
             loss = loss.mean()
         else:
-            loss = self.criterion(target_state_q_values, state_q_values)
-            loss = loss.mean()
+            loss = self.criterion(target_state_distributions,
+                                  state_distributions).mean()
         
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         self._update_target_network()
         
-        self.network.reset_noise()
-        self.target_network.reset_noise()
-    
-    def train(self, env, n_episodes):
-        """Trains the agent in the environment for n_episodes episodes.
-        
-        Args:
-            env: Gym environment.
-            n_episodes: int, number of episodes to train for.
-        
-        Returns:
-            list of ints, list of steps.
-            list of floats, list of returns.
-        """
-        step_list = []
-        return_list = []
-        for i_episode in range(1, n_episodes+1):
-            episode_return = 0
-            state = env.reset()
-            for t in count():
-                action = torch.argmax(self.network(
-                    torch.Tensor(state).to(self._device).unsqueeze(0))).item()
-                next_state, reward, done, _ = env.step(action)
-                
-                self.replay_buffer.add(torch.tensor(state,
-                                                    dtype=torch.float32),
-                                       torch.tensor([action],
-                                                    dtype=torch.long),
-                                       reward,
-                                       torch.tensor(next_state,
-                                                    dtype=torch.float32),
-                                       done)
-                state = next_state
-                episode_return += reward
-                self.step += 1
-                
-                for _ in range(self.n_gradient_steps):
-                    self.learn()
-                
-                if done:
-                    step_list.append(self.step)
-                    return_list.append(episode_return)
-                    print("Episode {:4d} : {:4d} steps | epsilon = {:4.2f} "
-                          "| return = {:.1f}".format(i_episode, t+1,
-                                                     self.epsilon,
-                                                     episode_return))
-                    
-                    if return_list and episode_return >= max(return_list):
-                        self.save("model.pt")
-                    
-                    break
-        
-        return step_list, return_list
+        if self.noisy:
+            self.network.reset_noise()
+            self.target_network.reset_noise()

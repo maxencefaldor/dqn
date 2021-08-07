@@ -3,7 +3,7 @@
 """Network architectures
 
 Network architectures suited for CartPole and Atari 2600 environments. It
-includes normal, dueling and distributional networks.
+includes normal, dueling, noisy and distributional networks.
 """
 
 import math
@@ -14,6 +14,12 @@ import torch.nn.functional as F
 
 
 class NoisyLinear(nn.Module):
+    """Implementation of the noisy linear layer described in "Noisy Networks
+    for Exploration, Fortunato et al. (2017). Noisy linear layers can be used
+    in a network architecture to drive exploration instead of the conventional
+    exploration heuristic epsilon-greedy.
+    """
+    
     def __init__(self, in_features, out_features, std_init=0.5):
         super(NoisyLinear, self).__init__()
         
