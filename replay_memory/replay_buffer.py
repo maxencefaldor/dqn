@@ -125,7 +125,8 @@ class ReplayBuffer(object):
             trajectory_discount_vector = (
                 self._cumulative_discount_vector[:trajectory_length])
             trajectory_rewards = torch.tensor(
-                [self._buffer[i].reward for i in trajectory_indices])
+                [self._buffer[i].reward for i in trajectory_indices],
+                dtype=torch.float32)
             
             state = self._buffer[index].state
             action = self._buffer[index].action
