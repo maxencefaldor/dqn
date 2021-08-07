@@ -224,8 +224,10 @@ class DQNAgent(object):
             n_episodes: int, number of episodes to train for.
         
         Returns:
+            list of ints, list of steps.
             list of floats, list of returns.
         """
+        step_list = []
         return_list = []
         for i_episode in range(1, n_episodes+1):
             episode_return = 0
@@ -251,6 +253,7 @@ class DQNAgent(object):
                     self.learn()
                 
                 if done:
+                    step_list.append(self.step)
                     return_list.append(episode_return)
                     print("Episode {:4d} : {:4d} steps | epsilon = {:4.2f} "
                           "| return = {:.1f}".format(i_episode, t+1,
@@ -262,7 +265,7 @@ class DQNAgent(object):
                     
                     break
         
-        return return_list
+        return step_list, return_list
     
     def test(self, env, n_steps=np.inf, agent_name=None):
         """Tests the agent in the environment for one episode and at most
