@@ -277,6 +277,7 @@ class DQNAgent(object):
             agent_name: str, filename of the recorded video. If None, the
                 episode is not recorded.
         """
+        self.network.eval()
         if agent_name:
             if not os.path.exists("videos"):
                 os.mkdir("videos")
@@ -302,6 +303,7 @@ class DQNAgent(object):
                 if agent_name:
                     recorder.close()
                 env.close()
+                self.network.train()
                 return episode_return
     
     def save(self, path):
