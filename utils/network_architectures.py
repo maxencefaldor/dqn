@@ -169,7 +169,7 @@ class DuelingAtariNetwork(nn.Module):
 
 
 class C51CartpoleNetwork(nn.Module):
-    """C51 Network architecture suited for CartPole environment."""
+    """C51 network architecture suited for CartPole environment."""
     
     def __init__(self, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
@@ -201,7 +201,7 @@ class C51CartpoleNetwork(nn.Module):
         return F.softmax(logits, dim=2)
 
 class C51AtariNetwork(nn.Module):
-    """C51 Network architecture suited for Atari 2600 environment."""
+    """C51 network architecture suited for Atari 2600 environment."""
     
     def __init__(self, n_actions, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
@@ -239,7 +239,7 @@ class C51AtariNetwork(nn.Module):
 
 
 class RainbowCartpoleNetwork(nn.Module):
-    """Rainbow Network architecture suited for CartPole environment.
+    """Rainbow network architecture suited for CartPole environment.
     
     Specifically, it is a dueling, noisy, distributional architecture."""
     
@@ -256,7 +256,12 @@ class RainbowCartpoleNetwork(nn.Module):
         
         self.fc1 = nn.Linear(4, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
-        self.fc3 = nn.Linear(n_neurons, 2*n_atoms)
+        
+        self.value_noisy = NoisyLinear(n_neurons, self.n_atoms)
+        self.value_stream = nn.Sequential(self.value_noisy)
+        
+        self.advantage_noisy = NoisyLinear(n_neurons, 2*self.n_atoms)
+        self.advantage_stream = nn.Sequential(self.advantage_noisy)
     
     def forward(self, x):
         distribution = self.distribution(x)
@@ -265,15 +270,26 @@ class RainbowCartpoleNetwork(nn.Module):
     def logits(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x.view(-1, 2, self.n_atoms)
-
+        
+        value = self.value_stream(x)
+        
+        advantage = self.advantage_stream(x)
+        
+        value = value.view(-1, 1, self.n_atoms)
+        advantage = advantage.view(-1, 2, self.n_atoms)
+        
+        return value + (advantage - advantage.mean(1, keepdim=True))
+    
     def distribution(self, x):
         logits = self.logits(x)
         return F.softmax(logits, dim=2)
 
+    def reset_noise(self):
+        self.value_noisy.reset_noise()
+        self.advantage_noisy.reset_noise()
+
 class RainbowAtariNetwork(nn.Module):
-    """C51 Network architecture suited for Atari 2600 environment."""
+    """Rainbow network architecture suited for Atari 2600 environment."""
     
     def __init__(self, n_actions, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
