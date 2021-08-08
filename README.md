@@ -10,6 +10,10 @@ Implementation of the DQN algorithm and six independent improvements as describe
 - Distributional RL [[7]](#references)
 - Noisy Networks [[8]](#references)
 
+I provide a `main.py` as well as a Jupyter Notebook which demonstrate how to set up, train and compare multiple agents to reproduce the results of the aforementioned paper.
+
+Don't hesitate to modify the default hyperparameters or the code to see how your new algorithm compare to the standard ones.
+
 ## Project Structure
 
 
@@ -28,6 +32,8 @@ Implementation of the DQN algorithm and six independent improvements as describe
         ├── network_architectures.py        # A collection of network architectures including standard, dueling, noisy or distributional
         ├── wrappers.py                     # Wrappers and utilities to create Gym environments
         └── plot.py                         # Plot utilities to display agents' performances
+
+In `network_architectures.py`, I also provide a clean implementation of a CartPole Swing Up environment. The pole starts hanging down and the cart must first swing the pole to an upright position before balancing it as in normal CartPole.
 
 ## Instructions
 
