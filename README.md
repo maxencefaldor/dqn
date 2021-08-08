@@ -10,19 +10,52 @@ Implementation of the DQN algorithm and six independent improvements as describe
 - Distributional RL [[7]](#references)
 - Noisy Networks [[8]](#references)
 
-# Requirements
+## Project Structure
+
+
+    ├── README.md
+    ├── main.py								# Lab where agents are defined, trained and compared
+    ├── .gitignore
+    ├── agents
+    │   ├── dqn_agent.py					# DQN agent
+    │   ├── ddqn_agent.py					# Double DQN agent
+    │   └── rainbow_agent.py				# Rainbow ageent
+    ├── replay_memory
+    │   ├── replay_buffer.py				# The standard DQN replay memory
+    │   ├── prioritized_replay_buffer.py	# Prioritized replay memory using a sum tree to sample
+    │   └── sum_tree.py            			# Sum tree implementation used by the prioritized replay memory
+    └── utils
+        ├── network_architectures.py		# A collection of network architectures including standard, dueling, noisy or distributional
+        ├── wrappers.py     			 	# Wrappers and utilities to create Gym environments
+        └── plot.py            				# Plot utilities to display agents' performances
+
+## Instructions
+
+First download the source code.
+```
+git clone https://github.com/maxencefaldor/dqn.git
+```
+Finally setup the environment and install dqn's dependencies
+```
+pip install -U pip
+pip install -r dqn/requirements.txt
+```
+
+### Requirements
 
 - [PyTorch](http://pytorch.org/)
+- [NumPy](https://numpy.org/)
+- [Gym](https://gym.openai.com/)
 - [atari-py](https://github.com/openai/atari-py)
-- [OpenCV Python](https://pypi.python.org/pypi/opencv-python)
+- [Matplotlib](https://matplotlib.org/)
 
-# Acknowledgements
+## Acknowledgements
 
 - [@openai](https://github.com/openai) for [Baselines](https://github.com/openai/baselines)
 - [@google](https://github.com/google) for [a sum tree implementation](https://github.com/google/dopamine/blob/master/dopamine/replay_memory/sum_tree.py)
 - [@higgsfield](https://github.com/higgsfield) for [RL-Adventure](https://github.com/higgsfield/RL-Adventure)
 
-# References
+## References
 
 [1] [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298), Hessel et al., 2017.  
 [2] [Playing Atari with Deep Reinforcement Learning](http://arxiv.org/abs/1312.5602), Mnih et al., 2013.  
