@@ -20,7 +20,7 @@ Implementation of the DQN algorithm and six independent improvements as describe
 
 - [@openai](https://github.com/openai) for [Baselines](https://github.com/openai/baselines)
 - [@google](https://github.com/google) for [a sum tree implementation](https://github.com/google/dopamine/blob/master/dopamine/replay_memory/sum_tree.py)
-- [@jaara](https://github.com/jaara) for [AI-blog](https://github.com/jaara/AI-blog)
+- [@higgsfield](https://github.com/higgsfield) for [RL-Adventure](https://github.com/higgsfield/RL-Adventure)
 
 # References
 
