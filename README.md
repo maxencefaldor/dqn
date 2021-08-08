@@ -14,20 +14,20 @@ Implementation of the DQN algorithm and six independent improvements as describe
 
 
     ├── README.md
-    ├── main.py								# Lab where agents are defined, trained and compared
+    ├── main.py                             # Lab where agents are defined, trained and compared
     ├── .gitignore
     ├── agents
-    │   ├── dqn_agent.py					# DQN agent
-    │   ├── ddqn_agent.py					# Double DQN agent
-    │   └── rainbow_agent.py				# Rainbow ageent
+    │   ├── dqn_agent.py                    # DQN agent
+    │   ├── ddqn_agent.py                   # Double DQN agent
+    │   └── rainbow_agent.py                # Rainbow ageent
     ├── replay_memory
-    │   ├── replay_buffer.py				# The standard DQN replay memory
-    │   ├── prioritized_replay_buffer.py	# Prioritized replay memory using a sum tree to sample
-    │   └── sum_tree.py            			# Sum tree implementation used by the prioritized replay memory
+    │   ├── replay_buffer.py                # The standard DQN replay memory
+    │   ├── prioritized_replay_buffer.py    # Prioritized replay memory using a sum tree to sample
+    │   └── sum_tree.py                     # Sum tree implementation used by the prioritized replay memory
     └── utils
-        ├── network_architectures.py		# A collection of network architectures including standard, dueling, noisy or distributional
-        ├── wrappers.py     			 	# Wrappers and utilities to create Gym environments
-        └── plot.py            				# Plot utilities to display agents' performances
+        ├── network_architectures.py        # A collection of network architectures including standard, dueling, noisy or distributional
+        ├── wrappers.py                     # Wrappers and utilities to create Gym environments
+        └── plot.py                         # Plot utilities to display agents' performances
 
 ## Instructions
 
