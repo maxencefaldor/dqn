@@ -33,7 +33,7 @@ Don't hesitate to modify the default hyperparameters or the code to see how your
         ├── wrappers.py                     # Wrappers and utilities to create Gym environments
         └── plot.py                         # Plot utilities to display agents' performances
 
-In `network_architectures.py`, I also provide a clean implementation of a CartPole Swing Up environment. The pole starts hanging down and the cart must first swing the pole to an upright position before balancing it as in normal CartPole.
+In `wrappers.py`, I also provide a clean implementation of a CartPole Swing Up environment. The pole starts hanging down and the cart must first swing the pole to an upright position before balancing it as in normal CartPole.
 
 ## Instructions
 
