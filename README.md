@@ -10,24 +10,30 @@ Implementation of the DQN algorithm and six independent improvements as describe
 - Distributional RL [[7]](#references)
 - Noisy Networks [[8]](#references)
 
+I provide a `main.py` as well as a Jupyter Notebook which demonstrate how to set up, train and compare multiple agents to reproduce the results of the aforementioned paper.
+
+Don't hesitate to modify the default hyperparameters or the code to see how your new algorithm compare to the standard ones.
+
 ## Project Structure
 
 
     ├── README.md
-    ├── main.py								# Lab where agents are defined, trained and compared
+    ├── main.py                             # Lab where agents are defined, trained and compared
     ├── .gitignore
     ├── agents
-    │   ├── dqn_agent.py					# DQN agent
-    │   ├── ddqn_agent.py					# Double DQN agent
-    │   └── rainbow_agent.py				# Rainbow ageent
+    │   ├── dqn_agent.py                    # DQN agent
+    │   ├── ddqn_agent.py                   # Double DQN agent
+    │   └── rainbow_agent.py                # Rainbow ageent
     ├── replay_memory
-    │   ├── replay_buffer.py				# The standard DQN replay memory
-    │   ├── prioritized_replay_buffer.py	# Prioritized replay memory using a sum tree to sample
-    │   └── sum_tree.py            			# Sum tree implementation used by the prioritized replay memory
+    │   ├── replay_buffer.py                # The standard DQN replay memory
+    │   ├── prioritized_replay_buffer.py    # Prioritized replay memory using a sum tree to sample
+    │   └── sum_tree.py                     # Sum tree implementation used by the prioritized replay memory
     └── utils
-        ├── network_architectures.py		# A collection of network architectures including standard, dueling, noisy or distributional
-        ├── wrappers.py     			 	# Wrappers and utilities to create Gym environments
-        └── plot.py            				# Plot utilities to display agents' performances
+        ├── network_architectures.py        # A collection of network architectures including standard, dueling, noisy or distributional
+        ├── wrappers.py                     # Wrappers and utilities to create Gym environments
+        └── plot.py                         # Plot utilities to display agents' performances
+
+In `wrappers.py`, I also provide a clean implementation of a CartPole Swing Up environment. The pole starts hanging down and the cart must first swing the pole to an upright position before balancing it as in normal CartPole.
 
 ## Instructions
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Q-network architectures.
+"""Implementation of Q-network architectures.
 
 Examples of network architectures suited for CartPole and Atari 2600
 environments. It includes normal, dueling, noisy and distributional networks.
@@ -14,10 +14,10 @@ import torch.nn.functional as F
 
 
 class NoisyLinear(nn.Module):
-    """Implementation of the noisy linear layer described in "Noisy Networks
-    for Exploration, Fortunato et al. (2017). Noisy linear layers can be used
+    """Implementation of the noisy linear layer as described in "Noisy Networks
+    for Exploration", Fortunato et al. (2017). Noisy linear layers can be used
     in a network architecture to drive exploration instead of the conventional
-    exploration heuristic epsilon-greedy.
+    epsilon-greedy heuristic.
     """
     
     def __init__(self, in_features, out_features, std_init=0.5):
@@ -310,7 +310,9 @@ class RainbowNetwork(nn.Module):
         self.advantage_noisy.reset_noise()
 
 class RainbowAtariNetwork(nn.Module):
-    """Rainbow network architecture suited for Atari 2600 environment."""
+    """Rainbow network architecture suited for Atari 2600 environment.
+    
+    Specifically, it is a dueling, noisy, distributional architecture."""
     
     def __init__(self, n_actions, n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
