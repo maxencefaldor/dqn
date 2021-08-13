@@ -93,7 +93,8 @@ class Network(nn.Module):
         return x
 
 class AtariNetwork(nn.Module):
-    """Network architecture suited for Atari 2600 environment."""
+    """Network architecture suited for Atari 2600 environment as described in
+    "Playing Atari with Deep Reinforcement Learning", Mnih et al. (2013)."""
     
     def __init__(self, n_actions):
         """Creates the layers.
