@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Network architectures
+"""Q-network architectures.
 
-Network architectures suited for CartPole and Atari 2600 environments. It
-includes normal, dueling, noisy and distributional networks.
+Examples of network architectures suited for CartPole and Atari 2600
+environments. It includes normal, dueling, noisy and distributional networks.
 """
 
 import math
