@@ -16,9 +16,8 @@ Don't hesitate to modify the default hyperparameters or the code to see how your
 
 ## Project Structure
 
-
     ├── README.md
-    ├── main.py                             # Lab where agents are defined, trained and compared
+    ├── main.py                             # Lab where agents are declared, trained and compared
     ├── .gitignore
     ├── agents
     │   ├── dqn_agent.py                    # DQN agent
