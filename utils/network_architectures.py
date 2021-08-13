@@ -70,20 +70,21 @@ class NoisyLinear(nn.Module):
         return epsilon
 
 
-class CartpoleNetwork(nn.Module):
-    """Network architecture suited for CartPole environment."""
+class Network(nn.Module):
+    """Network architecture suited for classic control environments."""
     
-    def __init__(self, n_neurons=16):
+    def __init__(self, n_features, n_actions, n_neurons=16):
         """Creates the layers.
         
         Args:
+            n_features: int, number of features of the state.
+            n_actions: int, number of actions possible for the agent.
             n_neurons: int, number of neurons of the hidden layers.
         """
-        super(CartpoleNetwork, self).__init__()
-        self.n_neurons = n_neurons
-        self.fc1 = nn.Linear(4, n_neurons)
+        super(Network, self).__init__()
+        self.fc1 = nn.Linear(n_features, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
-        self.fc3 = nn.Linear(n_neurons, 2)
+        self.fc3 = nn.Linear(n_neurons, n_actions)
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -116,21 +117,22 @@ class AtariNetwork(nn.Module):
         return self.fc2(x)
 
 
-class DuelingCartpoleNetwork(nn.Module):
-    """Dueling network architecture suited for CartPole environment."""
+class DuelingNetwork(nn.Module):
+    """Dueling network architecture suited for classic control environments."""
     
-    def __init__(self, n_neurons=16):
+    def __init__(self, n_features, n_actions, n_neurons=16):
         """Creates the layers.
         
         Args:
+            n_features: int, number of features of the state.
+            n_actions: int, number of actions possible for the agent.
             n_neurons: int, number of neurons of the hidden layers.
         """
-        super(DuelingCartpoleNetwork, self).__init__()
-        self.n_neurons = n_neurons
-        self.fc1 = nn.Linear(4, n_neurons)
+        super(DuelingNetwork, self).__init__()
+        self.fc1 = nn.Linear(n_features, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
         self.value_stream = nn.Sequential(nn.Linear(n_neurons, 1))
-        self.advantage_stream = nn.Sequential(nn.Linear(n_neurons, 2))
+        self.advantage_stream = nn.Sequential(nn.Linear(n_neurons, n_actions))
     
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -149,7 +151,6 @@ class DuelingAtariNetwork(nn.Module):
             n_actions: int, number of actions possible for the agent.
         """
         super(DuelingAtariNetwork, self).__init__()
-        self.n_actions = n_actions
         self.conv = nn.Sequential(
             nn.Conv2d(4, 32, kernel_size=8, stride=4),
             nn.ReLU(),
@@ -174,23 +175,29 @@ class DuelingAtariNetwork(nn.Module):
         return value + (advantage - advantage.mean())
 
 
-class C51CartpoleNetwork(nn.Module):
-    """C51 network architecture suited for CartPole environment."""
+class C51Network(nn.Module):
+    """C51 network architecture suited for classic control environments."""
     
-    def __init__(self, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, n_features, n_actions, n_neurons=16,
+                 n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
+            n_features: int, number of features of the state.
+            n_actions: int, number of actions possible for the agent.
             n_neurons: int, number of neurons of the hidden layers.
+            n_atoms: int, number of atoms for discretization of the support.
+            v_min: float, the value distribution support is [v_min, v_max].
+            v_max: float, the value distribution support is [v_min, v_max].
         """
-        super(C51CartpoleNetwork, self).__init__()
-        self.neurons = n_neurons
+        super(C51Network, self).__init__()
+        self.n_actions = n_actions
         self.n_atoms = n_atoms
         self.register_buffer("support", torch.linspace(v_min, v_max, n_atoms))
         
-        self.fc1 = nn.Linear(4, n_neurons)
+        self.fc1 = nn.Linear(n_features, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
-        self.fc3 = nn.Linear(n_neurons, 2*n_atoms)
+        self.fc3 = nn.Linear(n_neurons, n_actions*n_atoms)
     
     def forward(self, x):
         distribution = self.distribution(x)
@@ -200,7 +207,7 @@ class C51CartpoleNetwork(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        return x.view(-1, 2, self.n_atoms)
+        return x.view(-1, self.n_actions, self.n_atoms)
 
     def distribution(self, x):
         logits = self.logits(x)
@@ -215,6 +222,8 @@ class C51AtariNetwork(nn.Module):
         Args:
             n_actions: int, number of actions possible for the agent.
             n_atoms: int, number of atoms for discretization of the support.
+            v_min: float, the value distribution support is [v_min, v_max].
+            v_max: float, the value distribution support is [v_min, v_max].
         """
         super(C51AtariNetwork, self).__init__()
         self.n_actions = n_actions
@@ -244,29 +253,35 @@ class C51AtariNetwork(nn.Module):
         return F.softmax(logits, dim=2)
 
 
-class RainbowCartpoleNetwork(nn.Module):
-    """Rainbow network architecture suited for CartPole environment.
+class RainbowNetwork(nn.Module):
+    """Rainbow network architecture suited for classic control environments.
     
     Specifically, it is a dueling, noisy, distributional architecture."""
     
-    def __init__(self, n_neurons=16, n_atoms=51, v_min=-10, v_max=10):
+    def __init__(self, n_features, n_actions, n_neurons=16,
+                 n_atoms=51, v_min=-10, v_max=10):
         """Creates the layers.
         
         Args:
+            n_features: int, number of features of the state.
+            n_actions: int, number of actions possible for the agent.
             n_neurons: int, number of neurons of the hidden layers.
+            n_atoms: int, number of atoms for discretization of the support.
+            v_min: float, the value distribution support is [v_min, v_max].
+            v_max: float, the value distribution support is [v_min, v_max].
         """
-        super(RainbowCartpoleNetwork, self).__init__()
-        self.neurons = n_neurons
+        super(RainbowNetwork, self).__init__()
+        self.n_actions = n_actions
         self.n_atoms = n_atoms
         self.register_buffer("support", torch.linspace(v_min, v_max, n_atoms))
         
-        self.fc1 = nn.Linear(4, n_neurons)
+        self.fc1 = nn.Linear(n_features, n_neurons)
         self.fc2 = nn.Linear(n_neurons, n_neurons)
         
         self.value_noisy = NoisyLinear(n_neurons, self.n_atoms)
         self.value_stream = nn.Sequential(self.value_noisy)
         
-        self.advantage_noisy = NoisyLinear(n_neurons, 2*self.n_atoms)
+        self.advantage_noisy = NoisyLinear(n_neurons, n_actions*n_atoms)
         self.advantage_stream = nn.Sequential(self.advantage_noisy)
     
     def forward(self, x):
@@ -282,7 +297,7 @@ class RainbowCartpoleNetwork(nn.Module):
         advantage = self.advantage_stream(x)
         
         value = value.view(-1, 1, self.n_atoms)
-        advantage = advantage.view(-1, 2, self.n_atoms)
+        advantage = advantage.view(-1, self.n_actions, self.n_atoms)
         
         return value + (advantage - advantage.mean(1, keepdim=True))
     
